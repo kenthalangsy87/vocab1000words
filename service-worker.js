@@ -1,4 +1,4 @@
-const CACHE_NAME = 'vocab-quiz-v1';
+const CACHE_NAME = 'vocab-quiz-v2';
 const ASSETS = [
   'index.html',
   'manifest.json',
