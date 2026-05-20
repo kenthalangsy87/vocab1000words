@@ -244,7 +244,7 @@
         
         <div id="home-screen" class="home-view">
             <h1>Vocab Quiz</h1>
-            <p style="color: #7f8c8d; margin-bottom: 10px;">เลือกรายการที่ต้องการฝึกฝนด้านล่าง</p>
+            <p style="color: #7f8c8d; margin-bottom: 10px;">ເລືອກລາຍການທີ່ຕ້ອງການຝຶກພາສາອັງກິດ</p>
             
             <div class="menu-list">
                 <a href="1 (1000) words" class="menu-item-link">
@@ -275,13 +275,13 @@
 
         <div id="quiz-screen" style="display: none;">
             <div class="top-nav">
-                <button class="nav-btn" onclick="goHome()">🏠 หน้าแรก</button>
-                <button class="nav-btn" onclick="resetCurrentQuiz()">🔄 เริ่มข้อ 1 ใหม่</button>
+                <button class="nav-btn" onclick="goHome()">🏠 ໜ້າທໍາອິດ</button>
+                <button class="nav-btn" onclick="resetCurrentQuiz()">🔄 ເລີ່ມຂໍ້ 1 ໃໝ່</button>
             </div>
 
             <div class="stats-bar">
-                <div>ข้อที่: <span id="current-count">1</span>/<span id="total-count">10</span></div>
-                <div>คะแนน: <span id="score-display">0</span></div>
+                <div>ຂໍ້ທີ່: <span id="current-count">1</span>/<span id="total-count">10</span></div>
+                <div>ຄະແນນ: <span id="score-display">0</span></div>
                 <div class="streak-badge">🔥 Streak: <span id="streak-display">0</span></div>
             </div>
 
@@ -295,15 +295,15 @@
 
             <div class="options-list" id="options-box"></div>
 
-            <button class="next-btn" id="btn-next" onclick="nextQuestion()">คำต่อไป ➡️</button>
+            <button class="next-btn" id="btn-next" onclick="nextQuestion()">ຄໍາຕໍ່ໄປ ➡️</button>
         </div>
 
         <div id="summary-screen" class="summary-view">
-            <h2>🎉 สรุปผลการทดสอบ</h2>
+            <h2>🎉 ສະຫຼຸບຜົນການທົດສອບ</h2>
             <div class="score-circle" id="percent-display">0%</div>
             <p style="font-size: 18px; color: var(--dark);">
-                คุณตอบถูก <span id="final-score" style="color: var(--success); font-weight: bold;">0</span> ข้อ 
-                จากทั้งหมด <span id="final-total">0</span> คำ
+                ເຈົ້າຕອບຖືກ <span id="final-score" style="color: var(--success); font-weight: bold;">0</span> ຂໍ້ 
+                ຈາກທັງໝົດ <span id="final-total">0</span> ຄໍາ
             </p>
             <p id="streak-max-display" style="color: #856404; font-weight: bold;"></p>
             
