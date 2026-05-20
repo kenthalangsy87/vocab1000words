@@ -243,45 +243,57 @@
     <div class="container">
         
         <div id="home-screen" class="home-view">
-            <h1>Vocab Quiz</h1>
-            <p style="color: #7f8c8d; margin-bottom: 10px;">ເລືອກລາຍການທີ່ຕ້ອງການຝຶກພາສາອັງກິດ</p>
+            <h1>Vocabulary Quiz</h1>
+            <p style="color: #7f8c8d; margin-bottom: 10px;">เลือกรายการที่ต้องการฝึกฝนด้านล่าง</p>
             
             <div class="menu-list">
-                <a href="1 (1000) words" class="menu-item-link">
-                    <button class="menu-btn">ຝຶກທ່ອງຄໍາສັບພາສາອັງກິດ 1,000 ຄໍາ (ລະດັບ 1)</button>
+                <a href="Level1_1000words" class="menu-item-link">
+                    <button class="menu-btn">Level 1 one thousand words</button>
+                </a>
+
+                <a href="Level1_NotSure" class="menu-item-link">
+                    <button class="menu-btn">Level 1 Not Sure</button>
                 </a>
                 
-                <a href="1 (1000) words do not know" class="menu-item-link">
-                    <button class="menu-btn">ຝຶກທ່ອງຄໍາສັບພາສາອັງກິດ ຄັດເລືອກຄໍາສັບທີ່ຈື່ຍາກ (ລະດັບ 1)</button>
+                <a href="Level1_NotSure" class="menu-item-link">
+                    <button class="menu-btn">Level 1 Don't Know</button>
                 </a>
                 
-                <a href="2 (1000) words" class="menu-item-link">
-                    <button class="menu-btn">ຝຶກທ່ອງຄໍາສັບພາສາອັງກິດ 1,000 ຄໍາ (ລະດັບ 2)</button>
+                <a href="Level2_1000words" class="menu-item-link">
+                    <button class="menu-btn">Level 2 one thousand words</button>
                 </a>
                 
-                <a href="2 (1000) words do not know" class="menu-item-link">
-                    <button class="menu-btn">ຝຶກທ່ອງຄໍາສັບພາສາອັງກິດ ຄັດເລືອກຄໍາສັບທີ່ຈື່ຍາກ (ລະດັບ 2)</button>
+                <a href="Level2_NotSure" class="menu-item-link">
+                    <button class="menu-btn">Level 2 Not Sure</button>
+                </a>
+
+                <a href="Level2_DontKnow" class="menu-item-link">
+                    <button class="menu-btn">Level 2 Don't Know</button>
                 </a>
                 
-                <a href="3 (1000) words" class="menu-item-link">
-                    <button class="menu-btn">ຝຶກທ່ອງຄໍາສັບພາສາອັງກິດ 1,000 ຄໍາ (ລະດັບ 3)</button>
+                <a href="Level3_DontKnow" class="menu-item-link">
+                    <button class="menu-btn">Level 3 one thousand words</button>
+                </a>
+
+                <a href="Level2_NotSure" class="menu-item-link">
+                    <button class="menu-btn">Level 3 Not Sure</button>
                 </a>
                 
-                <a href="3 (1000) words do not know" class="menu-item-link">
-                    <button class="menu-btn">ຝຶກທ່ອງຄໍາສັບພາສາອັງກິດ ຄັດເລືອກຄໍາສັບທີ່ຈື່ຍາກ (ລະດັບ 3)</button>
+                <a href="Level2_DontKnow" class="menu-item-link">
+                    <button class="menu-btn">Level 3 Don't Know</button>
                 </a>
             </div>
         </div>
 
         <div id="quiz-screen" style="display: none;">
             <div class="top-nav">
-                <button class="nav-btn" onclick="goHome()">🏠 ໜ້າທໍາອິດ</button>
-                <button class="nav-btn" onclick="resetCurrentQuiz()">🔄 ເລີ່ມຂໍ້ 1 ໃໝ່</button>
+                <button class="nav-btn" onclick="goHome()">🏠 หน้าแรก</button>
+                <button class="nav-btn" onclick="resetCurrentQuiz()">🔄 เริ่มข้อ 1 ใหม่</button>
             </div>
 
             <div class="stats-bar">
-                <div>ຂໍ້ທີ່: <span id="current-count">1</span>/<span id="total-count">10</span></div>
-                <div>ຄະແນນ: <span id="score-display">0</span></div>
+                <div>ข้อที่: <span id="current-count">1</span>/<span id="total-count">10</span></div>
+                <div>คะแนน: <span id="score-display">0</span></div>
                 <div class="streak-badge">🔥 Streak: <span id="streak-display">0</span></div>
             </div>
 
@@ -295,15 +307,15 @@
 
             <div class="options-list" id="options-box"></div>
 
-            <button class="next-btn" id="btn-next" onclick="nextQuestion()">ຄໍາຕໍ່ໄປ ➡️</button>
+            <button class="next-btn" id="btn-next" onclick="nextQuestion()">คำต่อไป ➡️</button>
         </div>
 
         <div id="summary-screen" class="summary-view">
-            <h2>🎉 ສະຫຼຸບຜົນການທົດສອບ</h2>
+            <h2>🎉 สรุปผลการทดสอบ</h2>
             <div class="score-circle" id="percent-display">0%</div>
             <p style="font-size: 18px; color: var(--dark);">
-                ເຈົ້າຕອບຖືກ <span id="final-score" style="color: var(--success); font-weight: bold;">0</span> ຂໍ້ 
-                ຈາກທັງໝົດ <span id="final-total">0</span> ຄໍາ
+                คุณตอบถูก <span id="final-score" style="color: var(--success); font-weight: bold;">0</span> ข้อ 
+                จากทั้งหมด <span id="final-total">0</span> คำ
             </p>
             <p id="streak-max-display" style="color: #856404; font-weight: bold;"></p>
             
