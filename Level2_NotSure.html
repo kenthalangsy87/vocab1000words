@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚡ Flashcard Vocabulary Quiz</title>
+    <style>
+        :root {
+            --primary: #4a6fa5;
+            --success: #2ecc71;
+            --danger: #e74c3c;
+            --dark: #2c3e50;
+            --light: #f8f9fa;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #e0eafc, #cfdef3);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 450px;
+            text-align: center;
+            box-sizing: border-box;
+        }
+
+        /* แถบสถานะด้านบน */
+        .stats-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            font-size: 15px;
+            font-weight: bold;
+            color: var(--dark);
+        }
+
+        .streak-badge {
+            background: #fff3cd;
+            color: #856404;
+            padding: 5px 12px;
+            border-radius: 15px;
+            border: 1px solid #ffeeba;
+        }
+
+        /* การ์ดแสดงคำถาม */
+        .word-card {
+            background: var(--light);
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 25px;
+            border: 2px solid #e9ecef;
+        }
+
+        .word-main {
+            font-size: 36px;
+            font-weight: bold;
+            color: var(--primary);
+            margin: 0 0 5px 0;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .word-meta {
+            font-size: 15px;
+            color: #7f8c8d;
+            margin-bottom: 10px;
+        }
+
+        .pos-tag {
+            background: #e2e8f0;
+            color: #4a5568;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 13px;
+            text-transform: lowercase;
+            font-style: italic;
+            margin-right: 5px;
+        }
+
+        /* รายการปุ่มตัวเลือก */
+        .options-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .option-btn {
+            background: white;
+            border: 2px solid #cbd5e1;
+            padding: 14px 20px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: 500;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.2s ease;
+            color: var(--dark);
+        }
+
+        .option-btn:hover:not(:disabled) {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        /* แอนิเมชันเปลี่ยนสีเมื่อตอบ ถูก/ผิด */
+        .option-btn.correct {
+            background: #d4edda !important;
+            border-color: var(--success) !important;
+            color: #155724 !important;
+        }
+
+        .option-btn.wrong {
+            background: #f8d7da !important;
+            border-color: var(--danger) !important;
+            color: #721c24 !important;
+        }
+
+        /* ปุ่มเปลี่ยนข้อ */
+        .next-btn {
+            margin-top: 20px;
+            width: 100%;
+            padding: 12px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            display: none;
+            font-weight: bold;
+        }
+
+        .next-btn:hover {
+            background: #365f91;
+        }
+
+        /* หน้าจอสรุปผลคะแนน */
+        .summary-view {
+            display: none;
+        }
+
+        .score-circle {
+            width: 130px;
+            height: 130px;
+            border-radius: 50%;
+            background: var(--light);
+            border: 5px solid var(--primary);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 28px;
+            font-weight: bold;
+            margin: 20px auto;
+            color: var(--dark);
+        }
+
+        .restart-btn {
+            width: 100%;
+            padding: 14px;
+            background: var(--success);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 18px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+        .restart-btn:hover {
+            background: #27ae60;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div id="quiz-view">
+            <div class="stats-bar">
+                <div>ข้อที่: <span id="current-count">1</span>/<span id="total-count">10</span></div>
+                <div>คะแนน: <span id="score-display">0</span></div>
+                <div class="streak-badge">🔥 Streak: <span id="streak-display">0</span></div>
+            </div>
+
+            <div class="word-card">
+                <h1 class="word-main" id="word-target">-</h1>
+                <div class="word-meta">
+                    <span class="pos-tag" id="word-pos">-</span>
+                    <span id="word-phonetic">-</span>
+                </div>
+            </div>
+
+            <div class="options-list" id="options-box">
+                </div>
+
+            <button class="next-btn" id="btn-next" onclick="nextQuestion()">คำต่อไป ➡️</button>
+        </div>
+
+        <div id="summary-view" class="summary-view">
+            <h2>🎉 สรุปผลการทดสอบ</h2>
+            <div class="score-circle" id="percent-display">0%</div>
+            <p style="font-size: 18px; color: var(--dark);">
+                คุณตอบถูกทั้งหมด <span id="final-score" style="color: var(--success); font-weight: bold;">0</span> ข้อ 
+                จากคำศัพท์ทั้งหมด <span id="final-total">0</span> คำ
+            </p>
+            <p id="streak-max-display" style="color: #856404; font-weight: bold;"></p>
+            <button class="restart-btn" onclick="startQuiz()">🔄 เริ่มใหม่อีกครั้ง (สุ่มคำใหม่)</button>
+        </div>
+    </div>
+
+    <script>
+        // คลังข้อมูลคำศัพท์ 1000 คำแรก (A - BLOW) จากไฟล์ที่คุณแนบมา
+const vocabData = [
+{ word: "ACCENT", phonetic: "/ˈæksent/", pos: "noun", translation: "สำเนียง / การเน้นเสียง" },
+{ word: "AGENT", phonetic: "/ˈeɪdʒənt/", pos: "noun", translation: "ตัวแทน / ผู้แทน" },
+{ word: "ALARM", phonetic: "/əˈlɑːrm/", pos: "noun/verb", translation: "สัญญาณเตือนภัย / ปลุก / ทำให้ตกใจ" },
+{ word: "ANXIOUS", phonetic: "/ˈæŋkʃəs/", pos: "adjective", translation: "วิตกกังวล / กระวนกระวาย" },
+{ word: "APPLY", phonetic: "/əˈplaɪ/", pos: "verb", translation: "สมัคร / ประยุกต์ใช้" },
+{ word: "APPRECIATE", phonetic: "/əˈpriːʃieɪt/", pos: "verb", translation: "ซาบซึ้ง / เห็นคุณค่า" },
+{ word: "ATTENTION", phonetic: "/əˈtenʃn/", pos: "noun", translation: "ความสนใจ / การเอาใจใส่" },
+{ word: "ATTITUDE", phonetic: "/ˈætɪtuːd/", pos: "noun", translation: "ทัศนคติ / เจตคติ" },
+{ word: "AVAILABLE", phonetic: "/əˈveɪləbl/", pos: "adjective", translation: "ที่มีอยู่ / ว่าง / หาซื้อได้" },
+{ word: "BISCUIT", phonetic: "/ˈbɪskɪt/", pos: "noun", translation: "บิสกิต / ขนมปังกรอบ" },
+{ word: "BOSS", phonetic: "/bɔːs/", pos: "noun", translation: "เจ้านาย / หัวหน้า" },
+{ word: "BOUNCE", phonetic: "/baʊns/", pos: "verb/noun", translation: "เด้ง / กระดอน" },
+{ word: "BOW", phonetic: "/baʊ/", pos: "verb/noun", translation: "คำนับ / โค้ง / ธนู / โบว์" },
+{ word: "BOWL", phonetic: "/boʊl/", pos: "noun", translation: "ชาม / ถ้วยใส่ อาหาร" },
+{ word: "BRAKE", phonetic: "/breɪk/", pos: "noun/verb", translation: "ห้ามล้อ / เบรก" },
+{ word: "BRAND", phonetic: "/brænd/", pos: "noun", translation: "ตราสินค้า / ยี่ห้อ" },
+{ word: "BRAVE", phonetic: "/breɪv/", pos: "adjective", translation: "กล้าหาญ" },
+{ word: "BREED", phonetic: "/briːd/", pos: "verb/noun", translation: "ผสมพันธุ์ / สายพันธุ์ (สัตว์)" },
+{ word: "BRICK", phonetic: "/brɪk/", pos: "noun", translation: "อิฐ" },
+{ word: "BURST", phonetic: "/bɜːrst/", pos: "verb/noun", translation: "ระเบิดออก / แตกออก" },
+{ word: "BUTTER", phonetic: "/ˈbʌtər/", pos: "noun", translation: "เนย" },
+{ word: "BUTTON", phonetic: "/ˈbʌtn/", pos: "noun", translation: "กระดุม / ปุ่มกด" },
+{ word: "CANOE", phonetic: "/kəˈnuː/", pos: "noun/verb", translation: "เรือแคนู / พายเรือแคนู" },
+{ word: "CARPET", phonetic: "/ˈkɑːrpɪt/", pos: "noun", translation: "พรม" },
+{ word: "CART", phonetic: "/kɑːrt/", pos: "noun", translation: "รถเข็น / เกวียน" },
+{ word: "CENT", phonetic: "/sent/", pos: "noun", translation: "เซนต์ (หน่วยเงิน)" },
+{ word: "CHAIN", phonetic: "/tʃeɪn/", pos: "noun/verb", translation: "โซ่ / ห่วงโซ่ / โซ่ตรวน" },
+{ word: "CHANNEL", phonetic: "/ˈtʃænl/", pos: "noun", translation: "ช่อง (โทรทัศน์) / ช่องแคบ" },
+{ word: "CHEEK", phonetic: "/tʃiːk/", pos: "noun", translation: "แก้ม" },
+{ word: "CHEST", phonetic: "/tʃest/", pos: "noun", translation: "หน้าอก / หีบ / กล่องใหญ่" },
+{ word: "CLAIM", phonetic: "/kleɪm/", pos: "verb/noun", translation: "เรียกร้อง / อ้างสิทธิ์" },
+{ word: "CLOUD", phonetic: "/klaʊd/", pos: "noun", translation: "เมฆ" },
+{ word: "CLUE", phonetic: "/kluː/", pos: "noun", translation: "เบาะแส / ร่องรอย" },
+{ word: "CONDITION", phonetic: "/kənˈdɪʃn/", pos: "noun", translation: "เงื่อนไข / สภาพ / สภาวะ" },
+{ word: "COTTAGE", phonetic: "/ˈkɑːtɪdʒ/", pos: "noun", translation: "กระท่อม / บ้านพักตากอากาศหลังเล็ก" },
+{ word: "COUNCIL", phonetic: "/ˈkaʊnsl/", pos: "noun", translation: "สภา / สภากรรมการ" },
+{ word: "COUNTER", phonetic: "/ˈkaʊntər/", pos: "noun/verb", translation: "เคาน์เตอร์ / เครื่องนับ / โต้ตอบ" },
+{ word: "CRACK", phonetic: "/kræk/", pos: "verb/noun", translation: "ร้าว / แตก / รอยร้าว" },
+{ word: "DEFENCE", phonetic: "/dɪˈfens/", pos: "noun", translation: "การป้องกัน / การตั้งรับ" },
+{ word: "DEMAND", phonetic: "/dɪˈmænd/", pos: "noun/verb", translation: "ความต้องการ / อุปสงค์ / เรียกร้อง" },
+{ word: "DIET", phonetic: "/ˈdaɪət/", pos: "noun/verb", translation: "อาหาร / การควบคุมอาหาร" },
+{ word: "DIRECTED", phonetic: "/dəˈrektɪd/", pos: "adjective/verb", translation: "ซึ่งมีทิศทาง / ถูกควบคุม / กำกับ" },
+{ word: "DIRECTION", phonetic: "/dəˈrekʃn/", pos: "noun", translation: "ทิศทาง / คำสั่ง" },
+{ word: "DISEASE", phonetic: "/dɪˈziːz/", pos: "noun", translation: "โรค / โรคภัยไข้เจ็บ" },
+{ word: "DISTURB", phonetic: "/dɪˈstɜːrb/", pos: "verb", translation: "รบกวน" },
+{ word: "DOLL", phonetic: "/dɑːl/", pos: "noun", translation: "ตุ๊กตา" },
+{ word: "DOZEN", phonetic: "/ˈdʌzn/", pos: "noun", translation: "โหล (จำนวน 12 ชิ้น)" },
+{ word: "DUTY", phonetic: "/ˈduːti/", pos: "noun", translation: "หน้าที่ / ภาษี" },
+{ word: "EMBARRASS", phonetic: "/ɪmˈbærəs/", pos: "verb", translation: "ทำให้ขัดเขิน / ทำให้กระดากอาย" },
+{ word: "EMOTION", phonetic: "/ɪˈmoʊʃn/", pos: "noun", translation: "อารมณ์ / ความรู้สึก" },
+{ word: "EMPIRE", phonetic: "/ˈempaɪər/", pos: "noun", translation: "อาณาจักร / จักรวรรดิ" },
+{ word: "ENTERTAIN", phonetic: "/ˌentərˈteɪn/", pos: "verb", translation: "ให้ความบันเทิง / ต้อนรับขับสู้" },
+{ word: "ENVELOPE", phonetic: "/ˈenvəloʊp/", pos: "noun", translation: "ซองจดหมาย" },
+{ word: "EQUIPMENT", phonetic: "/ɪˈkwɪpmənt/", pos: "noun", translation: "อุปกรณ์ / เครื่องมือเครื่องใช้" },
+{ word: "EXCELLENT", phonetic: "/ˈeksələnt/", pos: "adjective", translation: "ยอดเยี่ยม / ดีเลิศ" },
+{ word: "EXHAUST", phonetic: "/ɪɡˈzɔːst/", pos: "verb/noun", translation: "ทำให้หมดแรง / ท่อไอเสีย" },
+{ word: "EXPOSE", phonetic: "/ɪkˈspoʊz/", pos: "verb", translation: "เปิดเผยออกมา / เปิดรับ (แสง/เชื้อโรค)" },
+{ word: "FANCY", phonetic: "/ˈfænsi/", pos: "adjective/verb", translation: "หรูหรา / นึกชอบ / จินตนาการ" },
+{ word: "FAVOUR", phonetic: "/ˈfeɪvər/", pos: "noun/verb", translation: "ความโปรดปราน / สนับสนุน / ช่วยเหลือ" },
+{ word: "FEATURE", phonetic: "/ˈfiːtʃər/", pos: "noun/verb", translation: "คุณลักษณะ / หน้าตา / จุดเด่น" },
+{ word: "FLAME", phonetic: "/fleɪm/", pos: "noun", translation: "เปลวไฟ / เปลวเพลิง" },
+{ word: "FLIP", phonetic: "/flɪp/", pos: "verb/noun", translation: "พลิก / ดีด / สะบัด" },
+{ word: "FROG", phonetic: "/frɔːɡ/", pos: "noun", translation: "กบ" },
+{ word: "GENERATION", phonetic: "/ˌdʒenəˈreɪʃn/", pos: "noun", translation: "รุ่น / ยุค / คนรุ่นเดียวกัน" },
+{ word: "GRAND", phonetic: "/ɡrænd/", pos: "adjective", translation: "ยิ่งใหญ่ / หรูหราโอ่อ่า" },
+{ word: "HIRE", phonetic: "/ˈhaɪər/", pos: "verb/noun", translation: "จ้าง / เช่า" },
+{ word: "IDIOT", phonetic: "/ˈɪdiət/", pos: "noun", translation: "คนโง่ / คนบ้า" },
+{ word: "ILLUSTRATE", phonetic: "/ˈɪləstreɪt/", pos: "verb", translation: "อธิบายด้วยภาพ / ยกตัวอย่างประกอบ" },
+{ word: "INCREDIBLE", phonetic: "/ɪnˈkredəbl/", pos: "adjective", translation: "เหลือเชื่อ / ยอดเยี่ยมมาก" },
+{ word: "INNOCENT", phonetic: "/ˈɪnəsnt/", pos: "adjective", translation: "บริสุทธิ์ / ไร้เดียงสา / ไม่มีความผิด" },
+{ word: "INSTRUMENT", phonetic: "/ˈɪnstrəmənt/", pos: "noun", translation: "เครื่องมือ / เครื่องดนตรี" },
+{ word: "JAM", phonetic: "/dʒæm/", pos: "noun/verb", translation: "แยมผลไม้ / ติดขัด / อัดแน่น" },
+{ word: "LEAGUE", phonetic: "/liːɡ/", pos: "noun", translation: "ลีก / สมาคม / สหพันธ์" },
+{ word: "LOCATE", phonetic: "/ˈloʊkeɪt/", pos: "verb", translation: "ตั้งอยู่ / หาที่ตั้ง" },
+{ word: "MAMA", phonetic: "/ˈmɑːmə/", pos: "noun", translation: "แม่" },
+{ word: "MASK", phonetic: "/mæsk/", pos: "noun/verb", translation: "หน้ากาก / ปิดบัง" },
+{ word: "MEASURE", phonetic: "/ˈmeʒər/", pos: "verb/noun", translation: "วัดขนาด / มาตรการ" },
+{ word: "MEAT", phonetic: "/miːt/", pos: "noun", translation: "เนื้อสัตว์" },
+{ word: "MILITARY", phonetic: "/ˈmɪləteri/", pos: "noun/adjective", translation: "ทหาร / ทางทหาร" },
+{ word: "MILL", phonetic: "/mɪl/", pos: "noun", translation: "โรงโม่ / โรงงานบด" },
+{ word: "NAIL", phonetic: "/neɪl/", pos: "noun/verb", translation: "เล็บ / ตะปู / ตอกตะปู" },
+{ word: "NARROW", phonetic: "/ˈnæroʊ/", pos: "adjective/verb", translation: "แคบ / จำกัด" },
+{ word: "NEITHER", phonetic: "/ˈniːðər/", pos: "adverb/conjunction", translation: "ไม่ทั้งสองอย่าง / ก็ไม่...เช่นกัน" },
+{ word: "NUT", phonetic: "/nʌt/", pos: "noun", translation: "ถั่วเปลือกแข็ง / น็อตตัวเมีย" },
+{ word: "OAK", phonetic: "/oʊk/", pos: "noun", translation: "ต้นโอ๊ก / ไม้โอ๊ก" },
+{ word: "OBJECT", phonetic: "/ˈɑːbdʒekt/", pos: "noun/verb", translation: "วัตถุ / สิ่งของ / คัดค้าน" },
+{ word: "OBSERVE", phonetic: "/əbˈzɜːrv/", pos: "verb", translation: "สังเกต / เฝ้าดู" },
+{ word: "ORDINARY", phonetic: "/ˈɔːrdneri/", pos: "adjective", translation: "ธรรมดา / สามัญ" },
+{ word: "OVEN", phonetic: "/ˈʌvn/", pos: "noun", translation: "เตาอบ" },
+{ word: "PAN", phonetic: "/pæn/", pos: "noun", translation: "กระทะก้นแบน" },
+{ word: "PANIC", phonetic: "/ˈpænɪk/", pos: "noun/verb", translation: "ความตื่นตระหนก / ตกใจกลัว" },
+{ word: "PERFORM", phonetic: "/pərˈfɔːrm/", pos: "verb", translation: "แสดง / ปฏิบัติหน้าที่" },
+{ word: "PIE", phonetic: "/paɪ/", pos: "noun", translation: "พาย (ขนม)" },
+{ word: "PIPE", phonetic: "/paɪp/", pos: "noun", translation: "ท่อ / กล้องยาสูบ" },
+{ word: "PLUG", phonetic: "/plʌɡ/", pos: "noun/verb", translation: "ปลั๊กไฟ / เสียบปลั๊ก / อุด" },
+{ word: "POLITE", phonetic: "/pəˈlaɪt/", pos: "adjective", translation: "สุภาพ" },
+{ word: "POUR", phonetic: "/pɔːr/", pos: "verb", translation: "เท / ริน" },
+{ word: "PRACTICAL", phonetic: "/ˈpræktɪkl/", pos: "adjective", translation: "ที่ใช้ได้จริง / ในทางปฏิบัติ" },
+{ word: "PREFER", phonetic: "/prɪˈfɜːr/", pos: "verb", translation: "ชอบมากกว่า" },
+{ word: "PREGNANT", phonetic: "/ˈpreɡnənt/", pos: "adjective", translation: "ตั้งครรภ์ / ท้อง" },
+{ word: "PREVIOUS", phonetic: "/ˈpriːviəs/", pos: "adjective", translation: "ก่อนหน้านี้" },
+{ word: "PRIVACY", phonetic: "/ˈprɪvəsi/", pos: "noun", translation: "ความเป็นส่วนตัว" },
+{ word: "PROCESS", phonetic: "/ˈproʊses/", pos: "noun/verb", translation: "กระบวนการ / ขั้นตอน" },
+{ word: "PROFESSION", phonetic: "/prəˈfeʃn/", pos: "noun", translation: "อาชีพ" },
+{ word: "PROJECT", phonetic: "/ˈprɒdʒekt/", pos: "noun", translation: "โครงการ / แผนงาน" },
+{ word: "PRONOUNCE", phonetic: "/prəˈnaʊns/", pos: "verb", translation: "ออกเสียง" },
+{ word: "PROPERTY", phonetic: "/ˈprɒpəti/", pos: "noun", translation: "ทรัพย์สิน / ที่ดิน / คุณสมบัติ" },
+{ word: "PROUD", phonetic: "/praʊd/", pos: "adjective", translation: "ภูมิใจ" },
+{ word: "PUNISH", phonetic: "/ˈpʌnɪʃ/", pos: "verb", translation: "ลงโทษ" },
+{ word: "PURCHASE", phonetic: "/ˈpɜːrtʃəs/", pos: "verb/noun", translation: "ซื้อ / การซื้อ" },
+{ word: "PURE", phonetic: "/pjʊər/", pos: "adjective", translation: "บริสุทธิ์" },
+{ word: "PURPOSE", phonetic: "/ˈpɜːrpəs/", pos: "noun", translation: "วัตถุประสงค์ / เป้าหมาย" },
+{ word: "QUALIFY", phonetic: "/ˈkwɑːlɪfaɪ/", pos: "verb", translation: "มีคุณสมบัติเหมาะสม" },
+{ word: "QUOTE", phonetic: "/kwoʊt/", pos: "verb/noun", translation: "อ้างอิงคำพูด" },
+{ word: "REACT", phonetic: "/riˈækt/", pos: "verb", translation: "ตอบสนอง / แสดงปฏิกิริยา" },
+{ word: "RECOGNIZE", phonetic: "/ˈrekəɡnaɪz/", pos: "verb", translation: "จำได้ / ยอมรับ / ตระหนักรู้" },
+{ word: "RECOMMEND", phonetic: "/ˌrekəˈmend/", pos: "verb", translation: "แนะนำ" },
+{ word: "REDUCE", phonetic: "/rɪˈduːs/", pos: "verb", translation: "ลดลง" },
+{ word: "REGION", phonetic: "/ˈriːdʒən/", pos: "noun", translation: "ภูมิภาค / เขตแดน" },
+{ word: "REGULAR", phonetic: "/ˈreɡjələr/", pos: "adjective", translation: "ปกติ / เป็นประจำ" },
+{ word: "RELEASE", phonetic: "/rɪˈliːs/", pos: "verb/noun", translation: "ปลดปล่อย / ออกวางจำหน่าย" },
+{ word: "REPRESENT", phonetic: "/ˌreprɪˈzent/", pos: "verb", translation: "เป็นตัวแทน / แสดงถึง" },
+{ word: "REQUIRE", phonetic: "/rɪˈkwaɪər/", pos: "verb", translation: "ต้องการ / บังคับใช้" },
+{ word: "RESULT", phonetic: "/rɪˈzʌlt/", pos: "noun/verb", translation: "ผลลัพธ์" },
+{ word: "RETIRE", phonetic: "/rɪˈtaɪər/", pos: "verb", translation: "เกษียณอายุ" },
+{ word: "RISK", phonetic: "/rɪsk/", pos: "noun/verb", translation: "ความเสี่ยง" },
+{ word: "ROOF", phonetic: "/ruːf/", pos: "noun", translation: "หลังคา" },
+{ word: "ROPE", phonetic: "/roʊp/", pos: "noun", translation: "เชือก" },
+{ word: "ROW", phonetic: "/roʊ/", pos: "noun/verb", translation: "แถว / พายเรือ" },
+{ word: "ROYAL", phonetic: "/ˈrɔɪəl/", pos: "adjective", translation: "เกี่ยวกับกษัตริย์ / หลวง" },
+{ word: "RUSH", phonetic: "/rʌʃ/", pos: "verb/noun", translation: "รีบเร่ง" },
+{ word: "SCREW", phonetic: "/skruː/", pos: "noun/verb", translation: "ตะปูควง / สกรู / ไขควง" },
+{ word: "SEAL", phonetic: "/siːl/", pos: "noun/verb", translation: "ตราประทับ / แมวน้ำ / ปิดผนึก" },
+{ word: "SEED", phonetic: "/siːd/", pos: "noun", translation: "เมล็ดพันธุ์" },
+{ word: "SENIOR", phonetic: "/ˈsiːniər/", pos: "adjective/noun", translation: "อาวุโส / รุ่นพี่" },
+{ word: "SEPARATE", phonetic: "/ˈseprət/", pos: "adjective/verb", translation: "แยกออกจากกัน" },
+{ word: "SEW", phonetic: "/soʊ/", pos: "verb", translation: "เย็บผ้า" },
+{ word: "SHEEP", phonetic: "/ʃiːp/", pos: "noun", translation: "แกะ" },
+{ word: "SHEET", phonetic: "/ʃiːt/", pos: "noun", translation: "แผ่นผ้า / ผ้าปูที่นอน / แผ่นกระดาษ" },
+{ word: "SHELL", phonetic: "/ʃel/", pos: "noun", translation: "เปลือก / หอย" },
+{ word: "SHELTER", phonetic: "/ˈʃeltər/", pos: "noun/verb", translation: "ที่พักพิง / ที่หลบภัย" },
+{ word: "SHIFT", phonetic: "/ʃɪft/", pos: "verb/noun", translation: "เคลื่อนย้าย / เปลี่ยนกะ" },
+{ word: "SINK", phonetic: "/sɪŋk/", pos: "verb/noun", translation: "จม / อ่างล้างจาน" },
+{ word: "SLIDE", phonetic: "/slaɪd/", pos: "verb/noun", translation: "ลื่นไถล / สไลด์" },
+{ word: "SOCIETY", phonetic: "/səˈsaɪəti/", pos: "noun", translation: "สังคม" },
+{ word: "SPARE", phonetic: "/sper/", pos: "adjective/verb", translation: "สำรอง / ว่าง" },
+{ word: "SPECIES", phonetic: "/ˈspiːʃiːz/", pos: "noun", translation: "สายพันธุ์ / ชนิด (สิ่งมีชีวิต)" },
+{ word: "SPECIFIC", phonetic: "/spəˈsɪfɪk/", pos: "adjective", translation: "เฉพาะเจาะจง" },
+{ word: "SPOIL", phonetic: "/spɔɪl/", pos: "verb", translation: "ทำให้เสียคน / ตามใจจนเสีย / เสีย(อาหาร)" },
+{ word: "SPRAY", phonetic: "/spreɪ/", pos: "noun/verb", translation: "สเปรย์ / ละอองน้ำ / ฉีดพ่น" },
+{ word: "STAIRS", phonetic: "/sterz/", pos: "noun", translation: "บันได" },
+{ word: "STEAK", phonetic: "/steɪk/", pos: "noun", translation: "สเต็ก" },
+{ word: "STRING", phonetic: "/strɪŋ/", pos: "noun", translation: "เชือกเส้นเล็ก / สายเครื่องดนตรี" },
+{ word: "STYLE", phonetic: "/staɪl/", pos: "noun", translation: "รูปแบบ / สไตล์" },
+{ word: "SUPPLY", phonetic: "/səˈplaɪ/", pos: "verb/noun", translation: "จัดหาให้ / อุปทาน" },
+{ word: "SUSPECT", phonetic: "/səˈspekt/", pos: "verb/noun", translation: "สงสัย / ผู้ต้องสงสัย" },
+{ word: "THEATRE", phonetic: "/ˈθɪətər/", pos: "noun", translation: "โรงละคร" },
+{ word: "THIN", phonetic: "/θɪn/", pos: "adjective", translation: "บาง / ผอม" },
+{ word: "THUS", phonetic: "/ðʌs/", pos: "adverb", translation: "ด้วยเหตุนี้ / ดังนี้" },
+{ word: "TONGUE", phonetic: "/tʌŋ/", pos: "noun", translation: "ลิ้น" },
+{ word: "TOPIC", phonetic: "/ˈtɑːpɪk/", pos: "noun", translation: "หัวข้อ" },
+{ word: "TOWEL", phonetic: "/ˈtaʊəl/", pos: "noun", translation: "ผ้าขนหนู" },
+{ word: "TRADITION", phonetic: "/trəˈdɪʃn/", pos: "noun", translation: "ประเพณี" },
+{ word: "TRANSFER", phonetic: "/trænsˈfɜːr/", pos: "verb/noun", translation: "โอน / ย้าย" },
+{ word: "TUNE", phonetic: "/tuːn/", pos: "noun/verb", translation: "ทำนองเพลง / ปรับเสียง" },
+{ word: "TWIN", phonetic: "/twɪn/", pos: "noun/adjective", translation: "ฝาแฝด" },
+{ word: "TWIST", phonetic: "/twɪst/", pos: "verb/noun", translation: "บิด / ม้วน" },
+{ word: "UNION", phonetic: "/ˈjuːniən/", pos: "noun", translation: "สหภาพ / การรวมตัวกัน" },
+{ word: "VALLEY", phonetic: "/ˈvæli/", pos: "noun", translation: "หุบเขา" },
+{ word: "VIOLENT", phonetic: "/ˈvaɪələnt/", pos: "adjective", translation: "รุนแรง" },
+{ word: "WAGE", phonetic: "/weɪdʒ/", pos: "noun", translation: "ค่าจ้าง" },
+{ word: "WARN", phonetic: "/wɔːrn/", pos: "verb", translation: "เตือน / แจ้งให้ระวัง" }
+];
+        // ⚙️ ตั้งค่าจำนวนข้อสอบที่จะสุ่มขึ้นมาเล่นต่อหนึ่งรอบ (ปรับเปลี่ยนได้ตามต้องการ)
+        const QUESTIONS_PER_ROUND = 50; 
+
+        let currentPool = [];
+        let currentIndex = 0;
+        let score = 0;
+        let streak = 0;
+        let maxStreak = 0;
+        let hasAnswered = false;
+
+        // ฟังก์ชันสุ่มลำดับ Array (Fisher-Yates Shuffle)
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        // ฟังก์ชันเริ่มต้นทำแบบทดสอบใหม่
+        function startQuiz() {
+            // โคลนคลังคำศัพท์และสุ่มเลือกคำตามจำนวนข้อสอบที่กำหนดไว้
+            let shuffledVocab = shuffle([...vocabData]);
+            currentPool = shuffledVocab.slice(0, Math.min(QUESTIONS_PER_ROUND, vocabData.length));
+            
+            currentIndex = 0;
+            score = 0;
+            streak = 0;
+            maxStreak = 0;
+            
+            document.getElementById('quiz-view').style.display = 'block';
+            document.getElementById('summary-view').style.display = 'none';
+            document.getElementById('total-count').innerText = currentPool.length;
+            
+            loadQuestion();
+        }
+
+        // แสดงคำถามและสร้างตัวเลือกคำตอบ 3 ตัวเลือก
+        function loadQuestion() {
+            hasAnswered = false;
+            document.getElementById('btn-next').style.display = 'none';
+            
+            const currentData = currentPool[currentIndex];
+            
+            // แสดงข้อมูลคำศัพท์บนหน้าจอ
+            document.getElementById('current-count').innerText = currentIndex + 1;
+            document.getElementById('score-display').innerText = score;
+            document.getElementById('streak-display').innerText = streak;
+            document.getElementById('word-target').innerText = currentData.word;
+            document.getElementById('word-pos').innerText = currentData.pos;
+            document.getElementById('word-phonetic').innerText = currentData.phonetic;
+
+            const optionsBox = document.getElementById('options-box');
+            optionsBox.innerHTML = '';
+
+            // ดึงคำแปลอื่นๆ ทั้งหมดในคลังมาเตรียมเป็นตัวเลือกหลอก (คัดคำตอบที่ถูกออกก่อน)
+            let wrongCandidates = vocabData
+                .map(v => v.translation)
+                .filter(t => t !== currentData.translation);
+            
+            // สุ่มเลือกตัวเลือกหลอกมา 3 ตัวเลือก
+            wrongCandidates = shuffle(wrongCandidates).slice(0, 3);
+            
+            // รวมคำแปลที่ถูกกับคำแปลหลอกเข้าด้วยกัน แล้วสุ่มตำแหน่งปุ่ม
+            let finalOptions = [currentData.translation, ...wrongCandidates];
+            finalOptions = shuffle(finalOptions);
+
+            // วนลูปสร้างปุ่มตัวเลือกขึ้นมาบนหน้าเว็บ
+            finalOptions.forEach(optionText => {
+                const btn = document.createElement('button');
+                btn.classList.add('option-btn');
+                btn.innerText = optionText;
+                btn.onclick = () => checkAnswer(btn, optionText, currentData.translation);
+                optionsBox.appendChild(btn);
+            });
+        }
+
+        // ฟังก์ชันการตรวจสอบคำตอบเมื่อผู้เรียนคลิกเลือกปุ่ม
+        function checkAnswer(selectedBtn, selectedText, correctText) {
+            if (hasAnswered) return; // ล็อกเพื่อป้องกันการคลิกคำตอบซ้ำ
+            hasAnswered = true;
+
+            const allButtons = document.querySelectorAll('.option-btn');
+            
+            if (selectedText === correctText) {
+                // กรณีตอบถูกต้อง
+                selectedBtn.classList.add('correct');
+                score++;
+                streak++;
+                if (streak > maxStreak) maxStreak = streak;
+                
+                // ถ้าระบบตอบถูกจะเปลี่ยนเป็นข้อถัดไปให้อัตโนมัติในเวลา 1 วินาที
+                setTimeout(() => {
+                    nextQuestion();
+                }, 1000);
+            } else {
+                // กรณีตอบผิด
+                selectedBtn.classList.add('wrong');
+                streak = 0; // รีเซ็ตแต้ม Streak กองไฟกลับเป็นศูนย์
+                
+                // ไฮไลต์ปุ่มเฉลยตัวเลือกที่ถูกต้องเป็นสีเขียวทันทีเพื่อให้รู้ข้อที่ถูก
+                allButtons.forEach(btn => {
+                    if (btn.innerText === correctText) {
+                        btn.classList.add('correct');
+                    }
+                });
+                
+                // แสดงปุ่ม "คำต่อไป" เพื่อให้ผู้เรียนคลิกเปลี่ยนข้อด้วยตนเองเมื่ออ่านเฉลยเสร็จ
+                document.getElementById('btn-next').style.display = 'block';
+            }
+
+            // สั่งปิดการใช้งานปุ่มทั้งหมดชั่วคราวเพื่อให้อ่านผลลัพธ์
+            allButtons.forEach(btn => btn.disabled = true);
+            document.getElementById('score-display').innerText = score;
+            document.getElementById('streak-display').innerText = streak;
+        }
+
+        // เปลี่ยนไปยังข้อถัดไป หรือเปลี่ยนไปหน้าสรุปผลถ้าทำครบกำหนด
+        function nextQuestion() {
+            currentIndex++;
+            if (currentIndex < currentPool.length) {
+                loadQuestion();
+            } else {
+                showSummary();
+            }
+        }
+
+        // แสดงหน้าจอสรุปคะแนนหลังทำครบทุกข้อ
+        function showSummary() {
+            document.getElementById('quiz-view').style.display = 'none';
+            document.getElementById('summary-view').style.display = 'block';
+            
+            const percentage = Math.round((score / currentPool.length) * 100);
+            document.getElementById('percent-display').innerText = percentage + "%";
+            document.getElementById('final-score').innerText = score;
+            document.getElementById('final-total').innerText = currentPool.length;
+            document.getElementById('streak-max-display').innerText = `🔥 ทำ Streak สูงสุดได้: ${maxStreak} ข้อติดต่อกัน`;
+        }
+
+        // เริ่มต้นการทำงานระบบทันทีที่เปิดหน้าเว็บ
+        startQuiz();
+    </script>
+
+</body>
+</html>
