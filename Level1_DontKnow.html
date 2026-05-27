@@ -16,6 +16,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>⚡ Flashcard Vocabulary Quiz</title>
     <style>
+        /* 🌙 สไตล์ควบคุมสีหน้าจอเมื่อเปิด Night Mode */
+body.night-mode {
+    background: linear-gradient(135deg, #1a202c, #2d3748) !important;
+}
+
+body.night-mode .container {
+    background: #1a202c !important;
+    color: #f7fafc !important;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5) !important;
+}
+
+body.night-mode .word-card {
+    background: #2d3748 !important;
+    border-color: #4a5568 !important;
+}
+
+body.night-mode .option-btn {
+    background: #1a202c !important;
+    color: #edf2f7 !important;
+    border-color: #4a5568 !important;
+}
+
+body.night-mode .option-btn:hover {
+    background: #2d3748 !important;
+}
         :root {
             --primary: #4a6fa5;
             --success: #2ecc71;
@@ -198,6 +223,15 @@
 
     <div class="container">
         <div id="quiz-view">
+            <div style="display: flex; justify-content: space-between; gap: 8px; margin-bottom: 15px;">
+    <a href="index.html" style="text-decoration: none; flex: 1;">
+        <button type="button" style="width: 100%; background: #cbd5e1; border: none; padding: 10px; border-radius: 8px; font-weight: bold; color: #2c3e50; cursor: pointer;">🏠 Home</button>
+    </a>
+
+    <button type="button" onclick="resetCurrentQuiz()" style="flex: 1; background: #cbd5e1; border: none; padding: 10px; border-radius: 8px; font-weight: bold; color: #2c3e50; cursor: pointer;">🔄 Refresh</button>
+
+    <button type="button" id="night-mode-toggle" onclick="toggleNightMode()" style="flex: 1; background: #2c3e50; border: none; padding: 10px; border-radius: 8px; font-weight: bold; color: white; cursor: pointer;">🌙 Night</button>
+</div>
             <div class="stats-bar">
                 <div>ข้อที่: <span id="current-count">1</span>/<span id="total-count">10</span></div>
                 <div>คะแนน: <span id="score-display">0</span></div>
@@ -226,14 +260,10 @@
                 จากคำศัพท์ทั้งหมด <span id="final-total">0</span> คำ
             </p>
             <p id="streak-max-display" style="color: #856404; font-weight: bold;"></p>
-            <button class="restart-btn" onclick="startQuiz()">🔄 เริ่มใหม่อีกครั้ง (สุ่มคำใหม่)</button>
-        </div>
-    </div>
-
     <script>
-        // คลังข้อมูลคำศัพท์ 1000 คำแรก (ABSOLUTE - YET) จากไฟล์ที่คุณแนบมา
-const vocabData = [
-{ word: "APART", phonetic: "/əˈpɑːrt/", pos: "adverb", translation: "แยกจากกัน / ห่างกัน" },
+        // คลังข้อมูลคำศัพท์ 1000 คำแรก (A - BLOW) จากไฟล์ที่คุณแนบมา
+        const vocabData = [
+    { word: "APART", phonetic: "/əˈpɑːrt/", pos: "adverb", translation: "แยกจากกัน / ห่างกัน" },
     { word: "APPARENT", phonetic: "/əˈpærənt/", pos: "adjective", translation: "ที่เห็นได้ชัด / เด่นชัด" },
     { word: "APPEAR", phonetic: "/əˈpɪr/", pos: "verb", translation: "ปรากฏตัว / ดูเหมือนว่า" },
     { word: "BUSH", phonetic: "/bʊʃ/", pos: "noun", translation: "พุ่มไม้" },
@@ -261,10 +291,10 @@ const vocabData = [
     { word: "TRUTH", phonetic: "/truːθ/", pos: "noun", translation: "ความจริง / สัจจะ" },
     { word: "UNDERNEATH", phonetic: "/ˌʌndərˈniːθ/", pos: "preposition/adverb", translation: "ข้างใต้ / อยู่ข้างล่าง" },
     { word: "WORSE", phonetic: "/wɜːrs/", pos: "adjective/adverb", translation: "แย่ลง / เลวร้ายกว่าเดิม" }
-];
+        ];
 
         // ⚙️ ตั้งค่าจำนวนข้อสอบที่จะสุ่มขึ้นมาเล่นต่อหนึ่งรอบ (ปรับเปลี่ยนได้ตามต้องการ)
-        const QUESTIONS_PER_ROUND = 64; 
+        const QUESTIONS_PER_ROUND = 50; 
 
         let currentPool = [];
         let currentIndex = 0;
@@ -281,7 +311,46 @@ const vocabData = [
             }
             return array;
         }
+// 🔄 ฟังก์ชันสำหรับปุ่ม Refresh (เริ่มทำข้อ 1 ใหม่)
+function resetCurrentQuiz() {
+    if (confirm("คุณต้องการเริ่มทำควิซใหม่อีกครั้งใช่หรือไม่?")) {
+        startQuiz();
+    }
+}
 
+// 🌙 ฟังก์ชันสลับโหมดกลางคืน (Night Mode) พร้อมระบบจำค่าในเครื่อง
+function toggleNightMode() {
+    const body = document.body;
+    const btn = document.getElementById('night-mode-toggle');
+    
+    body.classList.toggle('night-mode');
+    
+    if (body.classList.contains('night-mode')) {
+        btn.innerHTML = "☀️ Light";
+        btn.style.background = "#ffffff";
+        btn.style.color = "#2c3e50";
+        localStorage.setItem('theme', 'dark');
+    } else {
+        btn.innerHTML = "🌙 Night";
+        btn.style.background = "#2c3e50";
+        btn.style.color = "#ffffff";
+        localStorage.setItem('theme', 'light');
+    }
+}
+
+// เช็กสถานะ Night Mode ล่าสุดทุกครั้งที่เปิดหน้าเว็บขึ้นมาใหม่
+window.addEventListener('DOMContentLoaded', (event) => {
+    if (localStorage.getItem('theme') === 'dark') {
+        document.body.classList.add('night-mode');
+        const btn = document.getElementById('night-mode-toggle');
+        if (btn) {
+            btn.innerHTML = "☀️ Light";
+            btn.style.background = "#ffffff";
+            btn.style.color = "#2c3e50";
+        }
+    }
+})
+        
         // ฟังก์ชันเริ่มต้นทำแบบทดสอบใหม่
         function startQuiz() {
             // โคลนคลังคำศัพท์และสุ่มเลือกคำตามจำนวนข้อสอบที่กำหนดไว้
