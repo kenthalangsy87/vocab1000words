@@ -1,6 +1,17 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="VocabQuiz">
+<link rel="manifest" href="manifest.json">
+
+<script>
+  // โค้ดสำหรับสั่งให้ระบบจำข้อมูลไว้ในเครื่อง เล่นตอนไม่มีเน็ตได้
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('service-worker.js');
+  }
+</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>⚡ Flashcard Vocabulary Quiz</title>
@@ -220,7 +231,7 @@
     </div>
 
     <script>
-        // คลังข้อมูลคำศัพท์ 1000 คำแรก (A - BLOW) จากไฟล์ที่คุณแนบมา
+        // คลังข้อมูลคำศัพท์ 1000 คำแรก (ABSOLUTE - YET) จากไฟล์ที่คุณแนบมา
 const vocabData = [
 { word: "ACCENT", phonetic: "/ˈæksent/", pos: "noun", translation: "สำเนียง / การเน้นเสียง" },
 { word: "AGENT", phonetic: "/ˈeɪdʒənt/", pos: "noun", translation: "ตัวแทน / ผู้แทน" },
@@ -395,8 +406,9 @@ const vocabData = [
 { word: "WAGE", phonetic: "/weɪdʒ/", pos: "noun", translation: "ค่าจ้าง" },
 { word: "WARN", phonetic: "/wɔːrn/", pos: "verb", translation: "เตือน / แจ้งให้ระวัง" }
 ];
+
         // ⚙️ ตั้งค่าจำนวนข้อสอบที่จะสุ่มขึ้นมาเล่นต่อหนึ่งรอบ (ปรับเปลี่ยนได้ตามต้องการ)
-        const QUESTIONS_PER_ROUND = 50; 
+        const QUESTIONS_PER_ROUND = 100; 
 
         let currentPool = [];
         let currentIndex = 0;
