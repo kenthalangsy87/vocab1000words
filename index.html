@@ -11,7 +11,37 @@
     <link rel="manifest" href="manifest.json">
 
     <style>
-        :root {
+        :root /* 🌙 เพิ่มโค้ดชุดนี้ต่อท้ายสไตล์เดิม เพื่อกำหนดสีเมื่อเปิด Night Mode */
+body.night-mode {
+    background: linear-gradient(135deg, #1a202c, #2d3748) !important;
+}
+
+body.night-mode .container {
+    background: #1a202c !important;
+    color: #f7fafc !important;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5) !important;
+}
+
+body.night-mode .menu-btn {
+    background: #2d3748 !important;
+    color: #edf2f7 !important;
+    border-color: #4a5568 !important;
+}
+
+body.night-mode .menu-btn:hover {
+    background: #4a5568 !important;
+    color: #ffffff !important;
+}
+
+body.night-mode .word-card {
+    background: #2d3748 !important;
+    border-color: #4a5568 !important;
+}
+
+body.night-mode p {
+    color: #a0aec0 !important;
+}
+{
             --primary: #4a6fa5;
             --success: #2ecc71;
             --danger: #e74c3c;
@@ -247,6 +277,8 @@
             <p style="color: #7f8c8d; margin-bottom: 10px;">เลือกรายการที่ต้องการฝึกฝนด้านล่าง</p>
             
             <div class="menu-list">
+                <button class="menu-btn" id="night-mode-toggle" onclick="toggleNightMode()" style="justify-content: center; background: #2c3e50; color: white; margin-bottom: 10px;">🌙 เปลี่ยนเป็น Night Mode</button>
+
                 <a href="Level1_1000words" class="menu-item-link">
                     <button class="menu-btn">Level 1 one thousand words</button>
                 </a>
@@ -275,12 +307,36 @@
                     <button class="menu-btn">Level 3 one thousand words</button>
                 </a>
 
-                <a href="Level2_NotSure" class="menu-item-link">
+                <a href="Level3_NotSure" class="menu-item-link">
                     <button class="menu-btn">Level 3 Not Sure</button>
                 </a>
                 
-                <a href="Level2_DontKnow" class="menu-item-link">
+                <a href="Level3_DontKnow" class="menu-item-link">
                     <button class="menu-btn">Level 3 Don't Know</button>
+                </a>
+
+                <a href="Level4_1000words" class="menu-item-link">
+                    <button class="menu-btn">Level 4 one thousand words</button>
+                </a>
+
+                <a href="Level4_NotSure" class="menu-item-link">
+                    <button class="menu-btn">Level 4 Not Sure</button>
+                </a>
+                
+                <a href="Level4_DontKnow" class="menu-item-link">
+                    <button class="menu-btn">Level 4 Don't Know</button>
+                </a>
+
+                <a href="Level5_1000words" class="menu-item-link">
+                    <button class="menu-btn">Level 5 one thousand words</button>
+                </a>
+
+                <a href="Level5_NotSure" class="menu-item-link">
+                    <button class="menu-btn">Level 5 Not Sure</button>
+                </a>
+                
+                <a href="Level5_DontKnow" class="menu-item-link">
+                    <button class="menu-btn">Level 5 Don't Know</button>
                 </a>
             </div>
         </div>
@@ -327,6 +383,40 @@
     </div>
 
     <script>
+        // 🔄 ฟังก์ชันสลับโหมดหน้าจอ และจำสถานะไว้ในเครื่อง iPhone
+function toggleNightMode() {
+    const body = document.body;
+    const btn = document.getElementById('night-mode-toggle');
+    
+    // สลับคลาส night-mode ที่ตัวบอดี้
+    body.classList.toggle('night-mode');
+    
+    // เช็กสถานะปัจจุบันแล้วเปลี่ยนข้อความบนปุ่ม
+    if (body.classList.contains('night-mode')) {
+        btn.innerHTML = "☀️ เปลี่ยนเป็น Light Mode";
+        btn.style.background = "#ffffff";
+        btn.style.color = "#2c3e50";
+        localStorage.setItem('theme', 'dark'); // จำว่าเปิด Night Mode ไว้
+    } else {
+        btn.innerHTML = "🌙 เปลี่ยนเป็น Night Mode";
+        btn.style.background = "#2c3e50";
+        btn.style.color = "#ffffff";
+        localStorage.setItem('theme', 'light'); // จำว่าเปิดสว่างไว้
+    }
+}
+
+// ⏳ บรรทัดนี้ใช้สำหรับเช็กตอนเปิดแอปครั้งแรก ถ้าครั้งก่อนเปิด Night Mode ค้างไว้ ให้เปิดต่อทันที
+window.addEventListener('DOMContentLoaded', (event) => {
+    if (localStorage.getItem('theme') === 'dark') {
+        document.body.classList.add('night-mode');
+        const btn = document.getElementById('night-mode-toggle');
+        if(btn) {
+            btn.innerHTML = "☀️ เปลี่ยนเป็น Light Mode";
+            btn.style.background = "#ffffff";
+            btn.style.color = "#2c3e50";
+        }
+    }
+});
         // ตัวอย่างคำศัพท์เริ่มต้น (สามารถเพิ่มแก้ไขภายหลังได้)
         const vocabData = [
             { word: "PITY", phonetic: "/ˈpɪti/", pos: "noun/verb", translation: "ความสงสาร / น่าเสียดาย" }
