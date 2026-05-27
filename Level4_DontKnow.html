@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="VocabQuiz">
+<link rel="manifest" href="manifest.json">
+
+<script>
+  // โค้ดสำหรับสั่งให้ระบบจำข้อมูลไว้ในเครื่อง เล่นตอนไม่มีเน็ตได้
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('service-worker.js');
+  }
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚡ Flashcard Vocabulary Quiz</title>
+    <style>
+        :root {
+            --primary: #4a6fa5;
+            --success: #2ecc71;
+            --danger: #e74c3c;
+            --dark: #2c3e50;
+            --light: #f8f9fa;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #e0eafc, #cfdef3);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 450px;
+            text-align: center;
+            box-sizing: border-box;
+        }
+
+        /* แถบสถานะด้านบน */
+        .stats-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            font-size: 15px;
+            font-weight: bold;
+            color: var(--dark);
+        }
+
+        .streak-badge {
+            background: #fff3cd;
+            color: #856404;
+            padding: 5px 12px;
+            border-radius: 15px;
+            border: 1px solid #ffeeba;
+        }
+
+        /* การ์ดแสดงคำถาม */
+        .word-card {
+            background: var(--light);
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 25px;
+            border: 2px solid #e9ecef;
+        }
+
+        .word-main {
+            font-size: 36px;
+            font-weight: bold;
+            color: var(--primary);
+            margin: 0 0 5px 0;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .word-meta {
+            font-size: 15px;
+            color: #7f8c8d;
+            margin-bottom: 10px;
+        }
+
+        .pos-tag {
+            background: #e2e8f0;
+            color: #4a5568;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 13px;
+            text-transform: lowercase;
+            font-style: italic;
+            margin-right: 5px;
+        }
+
+        /* รายการปุ่มตัวเลือก */
+        .options-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .option-btn {
+            background: white;
+            border: 2px solid #cbd5e1;
+            padding: 14px 20px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: 500;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.2s ease;
+            color: var(--dark);
+        }
+
+        .option-btn:hover:not(:disabled) {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        /* แอนิเมชันเปลี่ยนสีเมื่อตอบ ถูก/ผิด */
+        .option-btn.correct {
+            background: #d4edda !important;
+            border-color: var(--success) !important;
+            color: #155724 !important;
+        }
+
+        .option-btn.wrong {
+            background: #f8d7da !important;
+            border-color: var(--danger) !important;
+            color: #721c24 !important;
+        }
+
+        /* ปุ่มเปลี่ยนข้อ */
+        .next-btn {
+            margin-top: 20px;
+            width: 100%;
+            padding: 12px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            display: none;
+            font-weight: bold;
+        }
+
+        .next-btn:hover {
+            background: #365f91;
+        }
+
+        /* หน้าจอสรุปผลคะแนน */
+        .summary-view {
+            display: none;
+        }
+
+        .score-circle {
+            width: 130px;
+            height: 130px;
+            border-radius: 50%;
+            background: var(--light);
+            border: 5px solid var(--primary);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 28px;
+            font-weight: bold;
+            margin: 20px auto;
+            color: var(--dark);
+        }
+
+        .restart-btn {
+            width: 100%;
+            padding: 14px;
+            background: var(--success);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 18px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+        .restart-btn:hover {
+            background: #27ae60;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div id="quiz-view">
+            <div class="stats-bar">
+                <div>ข้อที่: <span id="current-count">1</span>/<span id="total-count">10</span></div>
+                <div>คะแนน: <span id="score-display">0</span></div>
+                <div class="streak-badge">🔥 Streak: <span id="streak-display">0</span></div>
+            </div>
+
+            <div class="word-card">
+                <h1 class="word-main" id="word-target">-</h1>
+                <div class="word-meta">
+                    <span class="pos-tag" id="word-pos">-</span>
+                    <span id="word-phonetic">-</span>
+                </div>
+            </div>
+
+            <div class="options-list" id="options-box">
+                </div>
+
+            <button class="next-btn" id="btn-next" onclick="nextQuestion()">คำต่อไป ➡️</button>
+        </div>
+
+        <div id="summary-view" class="summary-view">
+            <h2>🎉 สรุปผลการทดสอบ</h2>
+            <div class="score-circle" id="percent-display">0%</div>
+            <p style="font-size: 18px; color: var(--dark);">
+                คุณตอบถูกทั้งหมด <span id="final-score" style="color: var(--success); font-weight: bold;">0</span> ข้อ 
+                จากคำศัพท์ทั้งหมด <span id="final-total">0</span> คำ
+            </p>
+            <p id="streak-max-display" style="color: #856404; font-weight: bold;"></p>
+            <button class="restart-btn" onclick="startQuiz()">🔄 เริ่มใหม่อีกครั้ง (สุ่มคำใหม่)</button>
+        </div>
+    </div>
+
+    <script>
+        // คลังข้อมูลคำศัพท์ 1000 คำแรก (ABSOLUTE - YET) จากไฟล์ที่คุณแนบมา
+const vocabData = [
+{ word: "ABNORMAL", phonetic: "/æbˈnɔːrml/", pos: "adjective", translation: "ผิดปกติ / ไม่เป็นไปตามกฎเกณฑ์" },
+    { word: "ABOARD", phonetic: "/əˈbɔːrd/", pos: "adverb/preposition", translation: "บนยานพาหนะ / บนเรือ / บนเครื่องบิน" },
+    { word: "ABRUPT", phonetic: "/əˈbrʌpt/", pos: "adjective", translation: "ทันทีทันใด / ฉับพลัน / หยาบคาย" },
+    { word: "ABSURD", phonetic: "/əbˈsɜːrd/", pos: "adjective", translation: "ไร้สาระ / นึกไม่ถึง / น่าหัวเราะเยาะ" },
+    { word: "ABUNDANT", phonetic: "/əˈbʌndənt/", pos: "adjective", translation: "มากมาย / อุดมสมบูรณ์" },
+    { word: "ACCUSTOM", phonetic: "/əˈkʌstəm/", pos: "verb", translation: "ทำให้คุ้นเคย / ปรับตัว" },
+    { word: "ACQUAINT", phonetic: "/əˈkweɪnt/", pos: "verb", translation: "ทำให้รู้จัก / ทำความคุ้นเคย" },
+    { word: "ACUTE", phonetic: "/əˈkjuːt/", pos: "adjective", translation: "รุนแรง / เฉียบพลัน / ฉลาดเฉียบแหลม" },
+    { word: "ADHERE", phonetic: "/ədˈhɪr/", pos: "verb", translation: "ยึดมั่น / เกาะติด / ปฏิบัติตามกฎ" },
+    { word: "ADJACENT", phonetic: "/əˈdʒeɪsnt/", pos: "adjective", translation: "ติดกัน / ข้างเคียง / ใกล้ชิด" },
+    { word: "ADVERSE", phonetic: "/ədˈvɜːrs/", pos: "adjective", translation: "เป็นผลร้าย / เป็นอันตราย / ตรงกันข้าม" },
+    { word: "AESTHETIC", phonetic: "/esˈθetɪk/", pos: "adjective/noun", translation: "เกี่ยวกับความงาม / สุนทรียศาสตร์" },
+    { word: "AFFILIATE", phonetic: "/əˈfɪlieɪt/", pos: "verb/noun", translation: "เข้าร่วม / ผูกพัน / บริษัทในเครือ" },
+    { word: "AGGRESSION", phonetic: "/əˈɡreʃn/", pos: "noun", translation: "การก้าวร้าว / การรุกราน" },
+    { word: "AGONY", phonetic: "/ˈæɡəni/", pos: "noun", translation: "ความเจ็บปวดรวดร้าว / ความทรมาน" },
+    { word: "ALIGN", phonetic: "/əˈlaɪn/", pos: "verb", translation: "จัดให้อยู่ในแนวเดียวกัน / ปรับให้ตรงกัน" },
+    { word: "ALIKE", phonetic: "/əˈlaɪk/", pos: "adjective/adverb", translation: "คล้ายกัน / เหมือนกัน" },
+    { word: "ALLEY", phonetic: "/ˈæli/", pos: "noun", translation: "ตรอก / ซอย" },
+    { word: "AMATEUR", phonetic: "/ˈæmətər/", pos: "noun/adjective", translation: "มือสมัครเล่น" },
+    { word: "AMBIGUOUS", phonetic: "/æmˈbɪɡjuəs/", pos: "adjective", translation: "กำกวม / คลุมเครือ / มีสองนัย" },
+    { word: "AMBITION", phonetic: "/æmˈbɪʃn/", pos: "noun", translation: "ความทะเยอทะยาน / ความมุ่งมั่น" },
+    { word: "AMBITIOUS", phonetic: "/æmˈbɪʃəs/", pos: "adjective", translation: "ทะเยอทะยาน / มุ่งมั่นสูง" },
+    { word: "AMBULANCE", phonetic: "/ˈæmbjələns/", pos: "noun", translation: "รถพยาบาล" },
+    { word: "AMID", phonetic: "/əˈmɪd/", pos: "preposition", translation: "ท่ามกลาง / ระหว่าง" },
+    { word: "ANCESTOR", phonetic: "/ˈænsestər/", pos: "noun", translation: "บรรพบุรุษ" },
+    { word: "ANCHOR", phonetic: "/ˈæŋkər/", pos: "noun/verb", translation: "สมอเรือ / ผู้ประกาศข่าวหลัก / ยึดเหนี่ยว" },
+    { word: "ANIMATE", phonetic: "/ˈænɪmeɪt/", pos: "verb/adjective", translation: "ทำให้มีชีวิตชีวา / เคลื่อนไหว" },
+    { word: "ANKLE", phonetic: "/ˈæŋkl/", pos: "noun", translation: "ข้อเท้า" },
+    { word: "ANONYMOUS", phonetic: "/əˈnɑːnɪməs/", pos: "adjective", translation: "นิรนาม / ไม่เปิดเผยชื่อ" },
+    { word: "ANTHROPOLOGY", phonetic: "/ˌænθrəˈpɑːlədʒi/", pos: "noun", translation: "มนุษยวิทยา" },
+    { word: "ANTIQUE", phonetic: "/ænˈtiːk/", pos: "noun/adjective", translation: "โบราณวัตถุ / เก่าแก่" },
+    { word: "APPAL", phonetic: "/əˈpɔːl/", pos: "verb", translation: "ทำให้ตกใจกลัว / ทำให้ขวัญหนีดีฝ่อ" },
+    { word: "APPLICABLE", phonetic: "/əˈplɪkəbl/", pos: "adjective", translation: "สามารถนำมาใช้ได้ / นำไปปรับใช้ได้" },
+    { word: "APPRAISE", phonetic: "/əˈpreɪz/", pos: "verb", translation: "ประเมินค่า / ประเมินราคา" },
+    { word: "ARCH", phonetic: "/ɑːrtʃ/", pos: "noun/verb", translation: "ส่วนโค้ง / ประตูโค้ง" },
+    { word: "ARMOUR", phonetic: "/ˈɑːrmər/", pos: "noun", translation: "ชุดเกราะ / เสื้อเกราะกันกระสุน" },
+    { word: "AROUSE", phonetic: "/əˈraʊz/", pos: "verb", translation: "กระตุ้น / ปลุกอารมณ์ / ปลุกปั่น" },
+    { word: "ARRAY", phonetic: "/əˈreɪ/", pos: "noun/verb", translation: "ขบวน / แถว / ชุดข้อมูล (คอมพิวเตอร์)" },
+    { word: "ARROGANT", phonetic: "/ˈærəɡənt/", pos: "adjective", translation: "หยิ่งยะโส / โอหัง" },
+    { word: "ARROW", phonetic: "/ˈæroʊ/", pos: "noun", translation: "ลูกศร / ลูกธนู" },
+    { word: "ARTICULATE", phonetic: "/ɑːrˈtɪkjuleɪt/", pos: "adjective/verb", translation: "ชัดเจน / ออกเสียงชัดคำ / อธิบายได้ดี" },
+    { word: "ARTIFICIAL", phonetic: "/ˌɑːrtɪˈfɪʃl/", pos: "adjective", translation: "เทียม / สิ่งประดิษฐ์ / ไม่แท้จริง" },
+    { word: "ASH", phonetic: "/æʃ/", pos: "noun", translation: "เถ้าถ่าน / ขี้เถ้า" },
+    { word: "ASPIRE", phonetic: "/əˈspaɪər/", pos: "verb", translation: "ปรารถนา / ทะเยอทะยานมุ่งสู่" },
+    { word: "ASSASSIN", phonetic: "/əˈsæsɪn/", pos: "noun", translation: "มือสังหาร / ฆาตกรลอบสังหาร" },
+    { word: "ASTONISH", phonetic: "/əˈstɑːnɪʃ/", pos: "verb", translation: "ทำให้แปลกใจมาก / ทำให้ประหลาดใจ" },
+    { word: "ASTRONOMY", phonetic: "/əˈstrɑːnəmi/", pos: "noun", translation: "ดาราศาสตร์" },
+    { word: "ATTAIN", phonetic: "/əˈteɪn/", pos: "verb", translation: "บรรลุเป้าหมาย / บรรลุถึง / ได้มา" },
+    { word: "ATTORNEY", phonetic: "/əˈtɜːrni/", pos: "noun", translation: "ทนายความ / นักกฎหมาย / ตัวแทนกฎหมาย" },
+    { word: "AUCTION", phonetic: "/ˈɔːkʃn/", pos: "noun/verb", translation: "การประมูล / ขายทอดตลาด" },
+    { word: "AUTHENTIC", phonetic: "/ɔːˈθentɪk/", pos: "adjective", translation: "แท้จริง / ของแท้ / น่าเชื่อถือ" },
+    { word: "AVENUE", phonetic: "/ˈævənuː/", pos: "noun", translation: "ถนนใหญ่ / เส้นทาง" },
+    { word: "AWAIT", phonetic: "/əˈweɪt/", pos: "verb", translation: "รอคอย / เฝ้ารอ" },
+    { word: "AYE", phonetic: "/aɪ/", pos: "exclamation/noun", translation: "เห็นด้วย / ใช่ (คำตอบรับทางการเรือ/สภา)" },
+    { word: "BALLET", phonetic: "/bæˈleɪ/", pos: "noun", translation: "ระบำปลายเท้า / บัลเลต์" },
+    { word: "BALLOT", phonetic: "/ˈbælət/", pos: "noun/verb", translation: "บัตรเลือกตั้ง / การลงคะแนนลับ" },
+    { word: "BANKRUPT", phonetic: "/ˈbæŋkrʌpt/", pos: "adjective/noun/verb", translation: "ล้มละลาย" },
+    { word: "BARN", phonetic: "/bɑːrn/", pos: "noun", translation: "โรงนา / ยุ้งฉาง" },
+    { word: "BARREL", phonetic: "/ˈbærəl/", pos: "noun", translation: "ถังกลมทรงกระบอก / ลำกล้องปืน" },
+    { word: "BASEMENT", phonetic: "/ˈbeɪsmənt/", pos: "noun", translation: "ห้องใต้ดิน" },
+    { word: "BASTARD", phonetic: "/ˈbæstərd/", pos: "noun", translation: "ลูกไม่มีพ่อ / ลูกนอกสมรส / คำด่า" },
+    { word: "BATHE", phonetic: "/beɪð/", pos: "verb", translation: "อาบน้ำ" },
+    { word: "BATTERED", phonetic: "/ˈbætərd/", pos: "adjective", translation: "บุบสลาย / ทรุดโทรม / ถูกทุบตีซ้ำๆ" },
+    { word: "BEAD", phonetic: "/biːd/", pos: "noun", translation: "ลูกปัด / หยดน้ำกลมๆ" },
+    { word: "BEARD", phonetic: "/bɪrd/", pos: "noun", translation: "หนวดเครา / เครา" },
+    { word: "BEHALF", phonetic: "/bɪˈhæf/", pos: "noun", translation: "ในนามของ / ตัวแทนของ" },
+    { word: "BELLY", phonetic: "/ˈbeli/", pos: "noun", translation: "ท้อง / พุง" },
+    { word: "BENEFICIAL", phonetic: "/ˌbenɪˈfɪʃl/", pos: "adjective", translation: "เป็นประโยชน์ / มีสาระดี" },
+    { word: "BETRAY", phonetic: "/bɪˈtreɪ/", pos: "verb", translation: "ทรยศ / หักหลัง / เผยความลับ" },
+    { word: "BIZARRE", phonetic: "/bɪˈzɑːr/", pos: "adjective", translation: "แปลกประหลาดมาก / วิตถาร" },
+    { word: "BLADE", phonetic: "/bleɪd/", pos: "noun", translation: "ใบมีด / คมมีด / ใบหญ้า" },
+    { word: "BLAZE", phonetic: "/bleɪz/", pos: "noun/verb", translation: "เปลวไฟที่ลุกโชติช่วง / ลุกไหม้" },
+    { word: "BLINK", phonetic: "/blɪŋk/", pos: "verb/noun", translation: "กระพริบตา" },
+    { word: "BLUR", phonetic: "/blɜːr/", pos: "noun/verb", translation: "ภาพเบลอ / สิ่งที่พร่ามัว" },
+    { word: "BOAST", phonetic: "/boʊst/", pos: "verb/noun", translation: "คุยโตโอ้อวด" },
+    { word: "BOUNDS", phonetic: "/baʊndz/", pos: "noun", translation: "ขอบเขต / ขอบข่าย / ข้อจำกัด" },
+    { word: "BOXED", phonetic: "/bɑːkst/", pos: "adjective", translation: "บรรจุกล่อง / โดนล้อมรอบ" },
+    { word: "BRASS", phonetic: "/bræs/", pos: "noun/adjective", translation: "ทองเหลือง / เครื่องดนตรีประเภทเป่าทองเหลือง" },
+    { word: "BREACH", phonetic: "/briːtʃ/", pos: "noun/verb", translation: "การฝ่าฝืน / การละเมิดสัญญา / รอยแตก" },
+    { word: "BREEZE", phonetic: "/briːz/", pos: "noun", translation: "ลมพัดเบาๆ / สายลมโชย" },
+    { word: "BREW", phonetic: "/bruː/", pos: "verb/noun", translation: "ต้มเหล้า / บ่มเบียร์ / ชงชาชงกาแฟ" },
+    { word: "BRIEFED", phonetic: "/briːft/", pos: "verb (past)", translation: "สรุปคำสั่ง / บรรยายสรุปย่อให้ฟังแล้ว" },
+    { word: "BROKER", phonetic: "/ˈbroʊkər/", pos: "noun", translation: "นายหน้า / คนกลาง" },
+    { word: "BRUTE", phonetic: "/bruːt/", pos: "noun/adjective", translation: "สัตว์ป่าเถื่อน / คนโหดร้ายทารุณ" },
+    { word: "BULB", phonetic: "/bʌlb/", pos: "noun", translation: "หลอดไฟ / พืชหัวรูปหัวหอม" },
+    { word: "BULK", phonetic: "/bʌlk/", pos: "noun/adjective", translation: "ปริมาณมหาศลาย / ส่วนใหญ่" },
+    { word: "BULL", phonetic: "/bʊl/", pos: "noun", translation: "วัวตัวผู้ / ตลาดหุ้นขาขึ้น" },
+    { word: "BUNDLE", phonetic: "/ˈbʌndl/", pos: "noun/verb", translation: "มัด / ห่อ / พัสดุผูกรวมกัน" },
+    { word: "BUREAUCRACY", phonetic: "/bjʊˈrɑːkrəsi/", pos: "noun", translation: "ระบบราชการ / พิธีรีตองของราชการ" },
+    { word: "BUREAUCRAT", phonetic: "/ˈbjʊrəkræt/", pos: "noun", translation: "ข้าราชการ / เจ้าหน้าที่บริหารระบบ" },
+    { word: "CARRIAGE", phonetic: "/ˈkærɪdʒ/", pos: "noun", translation: "ตู้รถไฟ / รถม้า / การขนส่ง" },
+    { word: "CASUALTY", phonetic: "/ˈkæʒuəlti/", pos: "noun", translation: "ผู้บาดเจ็บหรือเสียชีวิตจากอุบัติเหตุหรือสงคราม" },
+    { word: "CATER", phonetic: "/ˈkeɪtər/", pos: "verb", translation: "จัดอาหารให้ / บริการอาหาร / สรรหาตอบสนองความต้องการ" },
+    { word: "CATHEDRAL", phonetic: "/kəˈθiːdrəl/", pos: "noun", translation: "มหาวิหาร / โบสถ์ใหญ่" },
+    { word: "CAUTIOUS", phonetic: "/ˈkɔːʃəs/", pos: "adjective", translation: "ระมัดระวัง / รอบคอบ" },
+    { word: "CEMETERY", phonetic: "/ˈseməteri/", pos: "noun", translation: "สุสาน / ป่าช้า" },
+    { word: "CENSUS", phonetic: "/ˈsensəs/", pos: "noun", translation: "การสำรวจสำมะโนประชากร" },
+    { word: "CHANCELLOR", phonetic: "/ˈtʃænsələr/", pos: "noun", translation: "นายกรัฐมนตรี (เยอรมนี/ออสเตรีย) / อธิการบดี" },
+    { word: "CHAOS", phonetic: "/ˈkeɪɑːs/", pos: "noun", translation: "ความวุ่นวาย / ความโกลาหล" },
+    { word: "CHAPEL", phonetic: "/ˈtʃæpl/", pos: "noun", translation: "โบสถ์เล็กๆ (ในโรงพยาบาลหรือโรงเรียน)" },
+    { word: "CHIN", phonetic: "/tʃɪn/", pos: "noun", translation: "คาง" },
+    { word: "CHOIR", phonetic: "/ˈkwaɪər/", pos: "noun", translation: "คณะประสานเสียง / นักร้องประสานเสียงในโบสถ์" },
+    { word: "CHOKE", phonetic: "/tʃoʊk/", pos: "verb", translation: "สำลัก / หายใจไม่ออก / บีบคอ" },
+    { word: "CHRONIC", phonetic: "/ˈkrɑːnɪk/", pos: "adjective", translation: "เรื้อรัง (โรค/ปัญหา)" },
+    { word: "CHUNK", phonetic: "/tʃʌŋk/", pos: "noun", translation: "ชิ้นหนา / ก้อนใหญ่" },
+    { word: "CLERK", phonetic: "/klɜːrk/", pos: "noun", translation: "เสมียน / พนักงานออฟฟิศ / พนักงานร้านค้า" },
+    { word: "CLING", phonetic: "/klɪŋ/", pos: "verb", translation: "เกาะเหนียวแน่น / ยึดติด" },
+    { word: "CLOSURE", phonetic: "/ˈkloʊʒər/", pos: "noun", translation: "การปิดตัวลง / การสิ้นสุดยุติปัญหาใจ" },
+    { word: "CLUTCH", phonetic: "/klʌtʃ/", pos: "verb/noun", translation: "กำแน่น / คว้าไว้ / ระบบคลัตช์รถ" },
+    { word: "COFFIN", phonetic: "/ˈkɔːfɪn/", pos: "noun", translation: "โลงศพ" },
+    { word: "COGNITIVE", phonetic: "/ˈkɑːɡnətɪv/", pos: "adjective", translation: "เกี่ยวกับกระบวนการรับรู้และความคิดความจำ" },
+    { word: "COHERENT", phonetic: "/koʊˈhɪrənt/", pos: "adjective", translation: "เชื่อมโยงกันได้ดี / พูดจารู้เรื่อง / สอดคล้อง" },
+    { word: "COLLAR", phonetic: "/ˈkɑːlər/", pos: "noun", translation: "ปกเสื้อ / ปลอกคอสวมสัตว์" },
+    { word: "COLONEL", phonetic: "/ˈkɜːrnl/", pos: "noun", translation: "พันเอก" },
+    { word: "COMMENTATOR", phonetic: "/ˈkɑːmənteɪtər/", pos: "noun", translation: "ผู้วิจารณ์ / ผู้บรรยายข่าวกีฬา" },
+    { word: "COMMODITY", phonetic: "/kəˈmɑːdəti/", pos: "noun", translation: "สินค้าโภคภัณฑ์ / ของซื้อของขายวัตถุดิบ" },
+    { word: "COMMUTE", phonetic: "/kəˈmjuːt/", pos: "verb", translation: "เดินทางไปกลับระหว่างบ้านและที่ทำงานประจำ" },
+    { word: "COMPARATIVE", phonetic: "/kəmˈpærətɪv/", pos: "adjective", translation: "เกี่ยวกับการเปรียบเทียบ / เชิงเปรียบเทียบ" },
+    { word: "COMPATIBLE", phonetic: "/kəmˈpætəbl/", pos: "adjective", translation: "เข้ากันได้ / ใช้งานร่วมกันได้" },
+    { word: "COMPEL", phonetic: "/kəmˈpel/", pos: "verb", translation: "บังคับ / ผลักดันอย่างรุนแรง" },
+    { word: "COMPETENCE", phonetic: "/ˈkɑːmpɪtəns/", pos: "noun", translation: "ความรู้ความสามารถ / สมรรถนะ" },
+    { word: "COMPILE", phonetic: "/kəmˈpaɪl/", pos: "verb", translation: "รวบรวม / ประมวลผลโค้ด" },
+    { word: "COMPREHEND", phonetic: "/ˌkɑːmpriˈhend/", pos: "verb", translation: "เข้าใจอย่างลึกซ้วน / ครอบคลุม" },
+    { word: "CONCEAL", phonetic: "/kənˈsiːl/", pos: "verb", translation: "ปกปิด / ซ่อนเร้น" },
+    { word: "CONCEDE", phonetic: "/kənˈsiːd/", pos: "verb", translation: "ยอมรับ (ความจริง/ความพ่ายแพ้)" },
+    { word: "CONFORM", phonetic: "/kənˈfɔːrm/", pos: "verb", translation: "ปฏิบัติตามกฎ / ทำตามกลุ่มใหญ่" },
+    { word: "CONGREGATE", phonetic: "/ˈkɑːŋɡrɪɡeɪt/", pos: "verb", translation: "ชุมนุมกัน / รวมกลุ่มกัน" },
+    { word: "CONSCIENCE", phonetic: "/ˈkɑːnʃəns/", pos: "noun", translation: "ความรู้สึกผิดชอบชั่วดี / จิตสำนึก" },
+    { word: "CONSENSUS", phonetic: "/kənˈsensəs/", pos: "noun", translation: "ฉันทามติ / ความเห็นพ้องต้องกันทั้งหมด" },
+    { word: "CONSISTENCY", phonetic: "/kənˈsɪstənsi/", pos: "noun", translation: "ความสม่ำเสมอ / ความเหนียวแน่นข้น" },
+    { word: "CONSOLIDATE", phonetic: "/kənˈsɑːlɪdeɪt/", pos: "verb", translation: "ทำให้แข็งแกร่งเป็นหนึ่งเดียว / ควบรวมกิจการ" },
+    { word: "CONSPIRACY", phonetic: "/kənˈspɪrəsi/", pos: "noun", translation: "การสมคบคิด / แผนการลับลวงพราง" },
+    { word: "CONSTITUENCY", phonetic: "/kənˈstɪtʃuənsi/", pos: "noun", translation: "เขตเลือกตั้ง / กลุ่มผู้ลงคะแนน" },
+    { word: "CONTAMINATE", phonetic: "/kənˈtæmɪneɪt/", pos: "verb", translation: "ปนเปื้อน / ทำให้สกปรกด้วยสารเคมีหรือเชื้อโรค" },
+    { word: "CONTEMPLATE", phonetic: "/ˈkɑːntəmpleɪt/", pos: "verb", translation: "พิจารณาไตร่ตรองอย่างละเอียดถี่ถ้วน / คิดใคร่ครวญ" },
+    { word: "CONTEMPT", phonetic: "/kənˈtempt/", pos: "noun", translation: "การเหยียดหยาม / การดูถูก / การหมิ่นประมาทศาล" },
+    { word: "CONTINGENT", phonetic: "/kənˈtɪndʒənt/", pos: "adjective/noun", translation: "ขึ้นอยู่กับสถานการณ์อื่น / กองกำลังกลุ่มย่อยเฉพาะกิจ" },
+    { word: "CONTRARY", phonetic: "/ˈkɑːntreri/", pos: "adjective/noun", translation: "ตรงกันข้าม / ขัดแย้งกัน" },
+    { word: "CONVERSION", phonetic: "/kənˈvɜːrʒn/", pos: "noun", translation: "การแปลงสภาพ / การเปลี่ยนศาสนาหรือความเชื่อ" },
+    { word: "CORD", phonetic: "/kɔːrd/", pos: "noun", translation: "สายไฟ / เชือกหนา / สายเคเบิล" },
+    { word: "CORPS", phonetic: "/kɔːr/", pos: "noun", translation: "กองกำลัง / คณะทูต / หน่วยงานเฉพาะกิจ" },
+    { word: "COSTUME", phonetic: "/ˈkɑːstuːm/", pos: "noun", translation: "เครื่องแต่งกาย / ชุดแฟนซีตามเทศกาล" },
+    { word: "COUCH", phonetic: "/kaʊtʃ/", pos: "noun", translation: "โซฟา / ตั่งนอน" },
+    { word: "COUNTERPART", phonetic: "/ˈkaʊntərpɑːrt/", pos: "noun", translation: "บุคคลหรือสิ่งที่มีตำแหน่งหรือหน้าที่คู่ขนานกัน" },
+    { word: "COUP", phonetic: "/kuː/", pos: "noun", translation: "รัฐประหาร / การพลิกแพลงเอาชนะได้อย่างยอดเยี่ยม" },
+    { word: "COURTESY", phonetic: "/ˈkɜːrtəsi/", pos: "noun", translation: "ความสุภาพอ่อนน้อม / มารยาทอันดีงาม" },
+    { word: "CREDIBLE", phonetic: "/ˈkredəbl/", pos: "adjective", translation: "น่าเชื่อถือ / ฟังขึ้น" },
+    { word: "CRITIQUE", phonetic: "/krɪˈtiːk/", pos: "noun/verb", translation: "บทวิพากษ์วิจารณ์อย่างมีหลักการ" },
+    { word: "CRUDE", phonetic: "/kruːd/", pos: "adjective", translation: "ดิบ / ยังไม่ผ่านการกลั่น / หยาบคายหยาบๆ" },
+    { word: "CRUMBLE", phonetic: "/ˈkrʌmbl/", pos: "verb", translation: "แตกสลายเป็นชิ้นเล็กชิ้นน้อย / ล่มสลาย" },
+    { word: "CRUST", phonetic: "/krʌst/", pos: "noun", translation: "เปลือกนอกแข็ง / เปลือกขนมปัง / เปลือกโลก" },
+    { word: "CUBE", phonetic: "/kjuːb/", pos: "noun", translation: "ลูกบาศก์ / ทรงลูกเต๋า" },
+    { word: "CULT", phonetic: "/kʌlt/", pos: "noun", translation: "ลัทธิ / กลุ่มความเชื่อคลั่งไคล้เฉพาะตัว" },
+    { word: "CULTIVATE", phonetic: "/ˈkʌltɪveɪt/", pos: "verb", translation: "เพาะปลูก / ฝึกฝนอบรมนิสัย / สร้างความสัมพันธ์" },
+    { word: "CURSE", phonetic: "/kɜːrs/", pos: "noun/verb", translation: "คำสาปแช่ง / คำด่าหยาบคาย" },
+    { word: "CUSTODY", phonetic: "/ˈkʌstədi/", pos: "noun", translation: "สิทธิในการดูแลเด็ก / การคุมขังระหว่างรอพิจารณาคดี" },
+    { word: "CYNICAL", phonetic: "/ˈsɪnɪkl/", pos: "adjective", translation: "มองโลกในแง่ร้าย / มองว่าคนอื่นทำดีเพื่อผลประโยชน์ตัวเอง" },
+    { word: "DASH", phonetic: "/dæʃ/", pos: "verb/noun", translation: "วิ่งชนอย่างรวดเร็ว / สาดโถม / เครื่องหมายขีดกลาง (-)" },
+    { word: "DEAF", phonetic: "/def/", pos: "adjective", translation: "หูหนวก / ไม่ยอมฟัง" },
+    { word: "DECAY", phonetic: "/dɪˈkeɪ/", pos: "verb/noun", translation: "เน่าเปื่อย / ผุพัง / เสื่อมสลายย่อยย่อย" },
+    { word: "DECISIVE", phonetic: "/dɪˈsaɪsɪv/", pos: "adjective", translation: "เด็ดขาด / ซึ่งมีผลตัดสินใจสุดท้ายอย่างแน่ชัด" },
+    { word: "DEDUCT", phonetic: "/dɪˈdʌkt/", pos: "verb", translation: "หักออก / ลบออก (เช่น หักภาษี)" },
+    { word: "DEEM", phonetic: "/diːm/", pos: "verb", translation: "เห็นว่า / ถือว่า / นับว่าเป็น" },
+    { word: "DEFECT", phonetic: "/ˈdiːfekt/", pos: "noun/verb", translation: "ข้อบกพร่อง / ตำหนิ / แปรพักตร์ย้ายหนีประเทศ" },
+    { word: "DEFER", phonetic: "/dɪˈfɜːr/", pos: "verb", translation: "เลื่อนเวลาออกไป / ยอมตามความเห็นผู้ใหญ่กว่า" },
+    { word: "DEFICIENCY", phonetic: "/dɪˈfɪʃnsi/", pos: "noun", translation: "ความขาดแคลน / ความบกพร่องของสารอาหารหรือระบบ" },
+    { word: "DEFY", phonetic: "/dɪˈfaɪ/", pos: "verb", translation: "ท้าทาย / ขัดขืนไม่ยอมทำตามกฎ" },
+    { word: "DELICATE", phonetic: "/ˈdelɪkət/", pos: "adjective", translation: "ละเอียดอ่อน / เปราะบางแตกหักง่าย / ประณีต" },
+    { word: "DEMOGRAPHY", phonetic: "/dɪˈmɑːɡrəfi/", pos: "noun", translation: "ประชากรศาสตร์" },
+    { word: "DEPART", phonetic: "/dɪˈpɑːrt/", pos: "verb", translation: "ออกเดินทาง / ออกจากตำแหน่ง" },
+    { word: "DEPLOY", phonetic: "/dɪˈplɔɪ/", pos: "verb", translation: "แปรแถวกำลังพล / จัดวางตำแหน่งกำลังพลหรือระบบ" },
+    { word: "DEPRIVE", phonetic: "/dɪˈpraɪv/", pos: "verb", translation: "พรากสิ่งสำคัญไป / ขัดขวางสิทธิ์" },
+    { word: "DESPAIR", phonetic: "/dɪˈsper/", pos: "noun/verb", translation: "ความสิ้นหวัง / หมดหวัง" },
+    { word: "DESPATCH", phonetic: "/dɪˈspætʃ/", pos: "verb/noun", translation: "ส่งของอย่างรวดเร็ว / จัดการหนังสือนำส่งด่วน" },
+    { word: "DESTINATION", phonetic: "/ˌdestɪˈneɪʃn/", pos: "noun", translation: "จุดหมายปลายทาง" },
+    { word: "DESTINY", phonetic: "/ˈdestəni/", pos: "noun", translation: "โชคชะตา / พรหมลิขิต" },
+    { word: "DETACH", phonetic: "/dɪˈtætʃ/", pos: "verb", translation: "ถอดแยกออก / ปลีกตัวออกจาก" },
+    { word: "DETAIN", phonetic: "/dɪˈteɪn/", pos: "verb", translation: "กักตัว / ควบคุมตัวไว้ชั่วคราว" },
+    { word: "DETER", phonetic: "/dɪˈtɜːr/", pos: "verb", translation: "ยับยั้ง / กีดขวาง / ขู่ให้กลัวจนไม่กล้าทำ" },
+    { word: "DETERIORATE", phonetic: "/dɪˈtɪriəreɪt/", pos: "verb", translation: "เลวร้ายลง / ทรุดโทรมลงต่อเนื่อง" },
+    { word: "DEVISE", phonetic: "/dɪˈvaɪz/", pos: "verb", translation: "คิดค้นขึ้นมาใหม่ / วางแผนการ" },
+    { word: "DIABETES", phonetic: "/ˌdaɪəˈbiːtiːz/", pos: "noun", translation: "โรคเบาหวาน" },
+    { word: "DIAGNOSE", phonetic: "/ˌdaɪəɡˈnoʊs/", pos: "verb", translation: "วินิจฉัยโรค / วิเคราะห์หาสาเหตุปัญหา" },
+    { word: "DIAGNOSIS", phonetic: "/ˌdaɪəɡˈnoʊsɪs/", pos: "noun", translation: "ผลการวินิจฉัยโรค" },
+    { word: "DIFFERENTIATE", phonetic: "/ˌdɪfəˈrenʃieɪt/", pos: "verb", translation: "แยกแยะความแตกต่าง / ทำให้ต่างออกไป" },
+    { word: "DIGEST", phonetic: "/daɪˈdʒest/", pos: "verb/noun", translation: "ย่อยอาหาร / สรุปย่อสาระเนื้อหา" },
+    { word: "DIGNITY", phonetic: "/ˈdɪɡnəti/", pos: "noun", translation: "ศักดิ์ศรี / ความสง่างามน่าเคารพ" },
+    { word: "DILEMMA", phonetic: "/dɪˈlemə/", pos: "noun", translation: "ภาวะกลืนไม่เข้าคายไม่ออก / เลือกยากระหว่างสองทางร้าย" },
+    { word: "DIM", phonetic: "/dɪm/", pos: "adjective/verb", translation: "สลัว / มืดมัว / ส่องแสงริบหรี่" },
+    { word: "DIMINISH", phonetic: "/dɪˈmɪnɪʃ/", pos: "verb", translation: "ลดขนาดลง / บรรเทาลง" },
+    { word: "DISCARD", phonetic: "/dɪˈskɑːrd/", pos: "verb", translation: "ทิ้งขว้าง / โล๊ะทิ้ง / ไพ่ทิ้ง" },
+    { word: "DISCLOSURE", phonetic: "/dɪsˈkloʊʒər/", pos: "noun", translation: "การเปิดเผยข้อมูลลับความจริง" },
+    { word: "DISCOURAGE", phonetic: "/dɪsˈkɜːrɪdʒ/", pos: "verb", translation: "ทำให้หมดกำลังใจ / ขัดขวางทัดทาน" },
+    { word: "DISGUISE", phonetic: "/dɪsˈɡaɪz/", pos: "verb/noun", translation: "ปลอมตัว / ปิดบังอำพราง" },
+    { word: "DISPERSE", phonetic: "/dɪsˈpɜːrs/", pos: "verb", translation: "สลายกลุ่ม / กระจัดกระจายหนีไปคนละทิศละทาง" },
+    { word: "DISPLACE", phonetic: "/dɪsˈpleɪs/", pos: "verb", translation: "เข้าแทนที่ / ขับไล่ออกจากที่ทำกินเดิม" },
+    { word: "DISSOLVE", phonetic: "/dɪˈzɑːlv/", pos: "verb", translation: "ละลาย / ยุบสภา / สลายตัว" },
+    { word: "DISTORT", phonetic: "/dɪˈstɔːrt/", pos: "verb", translation: "บิดเบือนข้อเท็จจริง / ภาพเสียงเบี้ยวผิดรูป" },
+    { word: "DISTRACT", phonetic: "/dɪˈstrækt/", pos: "verb", translation: "ทำให้ไขเขว / ดึงความสนใจไปที่อื่น" },
+    { word: "DISTRESS", phonetic: "/dɪˈstres/", pos: "noun/verb", translation: "ความทุกข์ทรมานใจสาหัส / ภัยพิบัติต้องการความช่วยด่วน" },
+    { word: "DIVIDEND", phonetic: "/ˈdɪvɪdend/", pos: "noun", translation: "เงินปันผลหุ้น / ผลพลอยได้" },
+    { word: "DIVINE", phonetic: "/dɪˈvaɪn/", pos: "adjective", translation: "ศักดิ์สิทธิ์ / เกี่ยวกับพระเจ้า / วิเศษยอดเยี่ยม" },
+    { word: "DOCK", phonetic: "/dɑːk/", pos: "noun/verb", translation: "ท่าเรือ / อู่ต่อเรือ / คอกจำเลยในศาล" },
+    { word: "DOCUMENTARY", phonetic: "/ˌdɑːkjuˈmentri/", pos: "noun/adjective", translation: "ภาพยนตร์สารคดี / เกี่ยวกับเอกสารหลักฐาน" },
+    { word: "DONOR", phonetic: "/ˈdoʊnər/", pos: "noun", translation: "ผู้บริจาคอวัยวะหรือเงิน" },
+    { word: "DROWN", phonetic: "/draʊn/", pos: "verb", translation: "จมน้ำตาย / เสียงท่วมกลบ" },
+    { word: "DULL", phonetic: "/dʌl/", pos: "adjective", translation: "น่าเบื่อ / ทื่อ (มีด) / สีหมองไม่สดใส" },
+    { word: "DWELL", phonetic: "/dwel/", pos: "verb", translation: "อาศัยอยู่ / พำนัก" },
+    { word: "EARL", phonetic: "/ɜːrl/", pos: "noun", translation: "ท่านเอิร์ล / ขุนนางอังกฤษชั้นสูง" },
+    { word: "ELEGANT", phonetic: "/ˈelɪɡənt/", pos: "adjective", translation: "สง่างาม / หรูหรามีรสนิยม" },
+    { word: "ELEMENTARY", phonetic: "/ˌelɪˈmentri/", pos: "adjective", translation: "ขั้นพื้นฐาน / ประถมศึกษา" },
+    { word: "EMBODY", phonetic: "/ɪmˈbɑːdi/", pos: "verb", translation: "เป็นตัวแทนของ / รวบรวมแสดงออกถึงสิ่งที่เป็นรูปธรรม" },
+    { word: "EMPIRICAL", phonetic: "/ɪmˈpɪrɪkl/", pos: "adjective", translation: "ซึ่งได้จากประสบการณ์ตรงหรือการทดลองจริงเชิงประจักษ์" },
+    { word: "ENACT", phonetic: "/ɪnˈækt/", pos: "verb", translation: "ตรากฎหมายขึ้นมาบังคับใช้ / แสดงละครบทบาท" },
+    { word: "ENDEAVOUR", phonetic: "/ɪnˈdevər/", pos: "noun/verb", translation: "ความพยายามบากบั่นมุ่งมั่น" },
+    { word: "ENDOW", phonetic: "/ɪnˈdaʊ/", pos: "verb", translation: "บริจาคทุนทรัพย์ก้อนใหญ่ให้องค์กร / มอบพรสวรรค์ติดตัวมา" },
+    { word: "ENLARGE", phonetic: "/ɪnˈlɑːrdʒ/", pos: "verb", translation: "ขยายขนาดให้ใหญ่ขึ้น" },
+    { word: "ENLIGHTEN", phonetic: "/ɪnˈlaɪtn/", pos: "verb", translation: "ให้ความรู้ / มอบปัญญา / ทำให้ตระหนักรู้สัจธรรม" },
+    { word: "ENRICH", phonetic: "/ɪnˈrɪtʃ/", pos: "verb", translation: "ทำให้ร่ำรวยยิ่งขึ้น / เพิ่มคุณค่าสารอาหาร" },
+    { word: "ENROL", phonetic: "/ɪnˈroʊl/", pos: "verb", translation: "ลงทะเบียนเข้าเรียน / สมัครเข้าเป็นสมาชิก" },
+    { word: "ENTITY", phonetic: "/ˈentəti/", pos: "noun", translation: "เอกภาพที่มีตัวตนแยกอิสระ / นิติบุคคล" },
+    { word: "ENTREPRENEUR", phonetic: "/ˌɑːntrəprəˈnɜːr/", pos: "noun", translation: "ผู้ประกอบการ / นักลงทุนทำธุรกิจตัวเอง" },
+    { word: "ENVY", phonetic: "/ˈenvi/", pos: "noun/verb", translation: "ความอิจฉาริษยา" },
+    { word: "EQUITY", phonetic: "/ˈekwəti/", pos: "noun", translation: "ความถูกต้องเที่ยงธรรม / มูลค่าหุ้นในส่วนของผู้ถือหุ้น" },
+    { word: "ERECT", phonetic: "/ɪˈrekt/", pos: "adjective/verb", translation: "ตั้งตรง / สร้างตั้งขึ้นมา" },
+    { word: "ERUPT", phonetic: "/ɪˈrʌpt/", pos: "verb", translation: "ระเบิดออก (ภูเขาไฟ/อารมณ์ความรุนแรง)" },
+    { word: "ESCORT", phonetic: "/ˈeskɔːrt/", pos: "noun/verb", translation: "ผู้คุ้มกัน / คนนำทางคุ้มภัย / เพื่อนเที่ยว" },
+    { word: "ESSENCE", phonetic: "/ˈesns/", pos: "noun", translation: "แก่นแท้ / หัวใจสำคัญ / หัวเชื้อน้ำหอมสกัด" },
+    { word: "ET", phonetic: "/et/", pos: "abbreviation", translation: "และอื่น ๆ (ย่อมาจากคำละติน et cetera)" },
+    { word: "ETHICAL", phonetic: "/ˈeθɪkl/", pos: "adjective", translation: "ตามหลักจริยธรรม / มีศีลธรรมประจำวิชาชีพ" },
+    { word: "EVACUATE", phonetic: "/ɪˈvækjueɪt/", pos: "verb", translation: "อพยพหนีภัยจากพื้นที่อันตราย / ขนย้ายด่วน" },
+    { word: "EVOKE", phonetic: "/ɪˈvoʊk/", pos: "verb", translation: "ดึงความทรงจำเก่ากลับมา / กระตุ้นอารมณ์ความรู้สึก" },
+    { word: "EXAGGERATE", phonetic: "/ɪɡˈzædʒəreɪt/", pos: "verb", translation: "พูดโอเวอร์เกินความจริง / คุยเขื่องเกินเหตุ" },
+    { word: "EXCAVATE", phonetic: "/ˈekskəveɪt/", pos: "verb", translation: "ขุดค้นโบราณวัตถุ / ขุดเจาะรูหลุมดินใหญ่" },
+    { word: "EXCLAIM", phonetic: "/ɪkˈskleɪm/", pos: "verb", translation: "ร้องอุทานออกมาด้วยความตกใจหรือยินดี" },
+    { word: "EXEMPT", phonetic: "/ɪɡˈzempt/", pos: "adjective/verb/noun", translation: "ได้รับการยกเว้น (กฎ/ภาษี)" },
+    { word: "EXERT", phonetic: "/ɪɡˈzɜːrt/", pos: "verb", translation: "ใช้อำนาจหรือความพยายามอย่างเต็มที่" },
+    { word: "EXPEDITION", phonetic: "/ˌekspəˈdɪʃn/", pos: "noun", translation: "การเดินทางสำรวจค้นคว้าที่จัดตั้งเป็นคณะพิเศษ" },
+    { word: "EXPERTISE", phonetic: "/ˌekspɜːrˈtiːz/", pos: "noun", translation: "ความเชี่ยวชาญเฉพาะทางระดับสูง" },
+    { word: "EXPLODE", phonetic: "/ɪkˈsploʊd/", pos: "verb", translation: "ระเบิดออกเสียงดัง / อารมณ์ประทุรุนแรง" },
+    { word: "EYEBROW", phonetic: "/ˈaɪbraʊ/", pos: "noun", translation: "คิ้ว" },
+    { word: "FACTION", phonetic: "/ˈfækʃn/", pos: "noun", translation: "ฝักฝ่าย / กลุ่มย่อยในพรรคที่ขัดแย้งกัน" },
+    { word: "FAME", phonetic: "/feɪm/", pos: "noun", translation: "ชื่อเสียง / ความโด่งดัง" },
+    { word: "FARE", phonetic: "/fer/", pos: "noun/verb", translation: "ค่าโดยสารรถเรือ / ดำเนินชีวิตรอดมาได้" },
+    { word: "FATAL", phonetic: "/ˈfeɪtl/", pos: "adjective", translation: "ซึ่งถึงแก่ชีวิต / ร้ายแรงจนเสียหายพังพินาศ" },
+    { word: "FEDERATE", phonetic: "/ˈfedəreɪt/", pos: "verb/adjective", translation: "รวมเข้าเป็นสหพันธรัฐร่วมกัน" },
+    { word: "FEMININE", phonetic: "/ˈfemənɪn/", pos: "adjective/noun", translation: "ลักษณะของผู้หญิง / ความเป็นสตรี" },
+    { word: "FINED", phonetic: "/faɪnd/", pos: "verb (past)", translation: "โดนปรับเงินเนื่องจากทำผิดกฎหมายหรือระเบียบ" },
+    { word: "FISCAL", phonetic: "/ˈfɪskl/", pos: "adjective", translation: "เกี่ยวกับการเงินของรัฐหรือปีงบประมาณ" },
+    { word: "FLANK", phonetic: "/flæŋk/", pos: "noun/verb", translation: "สีข้าง / ด้านข้างลำตัวหรือกองทัพ" },
+    { word: "FLAP", phonetic: "/flæp/", pos: "verb/noun", translation: "ขยับปีกพึ่บพั่บ / แผ่นเปิดปิดห้อยลงมา" },
+    { word: "FLAW", phonetic: "/flɔː/", pos: "noun/verb", translation: "ตำหนิ / ข้อบกพร่องที่ทำให้สิ่งนั้นไม่สมบูรณ์" },
+    { word: "FLEET", phonetic: "/fliːt/", pos: "noun/adjective", translation: "กองเรือรบ / กองรถบรรทุกสินค้าในเครือเดียวกัน" },
+    { word: "FLICK", phonetic: "/flɪk/", pos: "verb/noun", translation: "ดีดเบาๆ / สะบัดข้อมือเปิดผ่านอย่างเร็ว" },
+    { word: "FLICKER", phonetic: "/ˈflɪkər/", pos: "verb/noun", translation: "สั่นระริกริบหรี่ (แสงไฟ/เปลวเทียน)" },
+    { word: "FLING", phonetic: "/flɪŋ/", pos: "verb/noun", translation: "เหวี่ยงไปอย่างแรง / ขว้างปาทิ้งขว้าง" },
+    { word: "FLOCK", phonetic: "/flɑːk/", pos: "noun/verb", translation: "ฝูงนกฝูงแกะ / กลุ่มคนแห่แหนรวมตัวจำนวนมาก" },
+    { word: "FLOUR", phonetic: "/ˈflaʊər/", pos: "noun", translation: "แป้งทำขนมปังหรืออาหาร" },
+    { word: "FLOURISH", phonetic: "/ˈflɜːrɪʃ/", pos: "verb/noun", translation: "เจริญรุ่งเรืองเฟื่องฟู / เติบโตงอกงามได้ดีเยี่ยม" },
+    { word: "FLUID", phonetic: "/ˈfluːɪd/", pos: "noun/adjective", translation: "ของไหล / ของเหลว / ราบรื่นเปลี่ยนแปลงง่าย" },
+    { word: "FLUSH", phonetic: "/flʌʃ/", pos: "verb/noun", translation: "กดชักโครกสาดน้ำ / หน้าแดงฉ่า / บลัชออนหน้าสว่าง" },
+    { word: "FOND", phonetic: "/fɑːnd/", pos: "adjective", translation: "รักใคร่ / ชอบมาก / ผูกพันลึกซึ้ง" },
+    { word: "FORBID", phonetic: "/fərˈbɪd/", pos: "verb", translation: "ห้าม / บังคับสั่งห้ามกระทำเด็ดขาด" },
+    { word: "FORE", phonetic: "/fɔːr/", pos: "adjective/noun", translation: "ส่วนหน้า / อยู่ข้างหน้าสุด / คำเตือนตีกอล์ฟ" },
+    { word: "FOREHEAD", phonetic: "/ˈfɔːrhed/", pos: "noun", translation: "หน้าผาก" },
+    { word: "FORESEE", phonetic: "/fɔːrˈsiː/", pos: "verb", translation: "หยั่งรู้ล่วงหน้า / คาดการณ์อนาคตออก" },
+    { word: "FORGE", phonetic: "/fɔːrdʒ/", pos: "verb/noun", translation: "ปลอมแปลงลายเซ็นหรืองานศิลป์ / โรงตีเหล็กอุณหภูมิสูง" },
+    { word: "FORK", phonetic: "/fɔːrk/", pos: "noun/verb", translation: "ส้อม / ทางแยกสองแพร่งถนน" },
+    { word: "FORT", phonetic: "/fɔːrt/", pos: "noun", translation: "ป้อมปราการทหารค่ายทหาร" },
+    { word: "FRACTION", phonetic: "/ˈfrækʃn/", pos: "noun", translation: "เศษส่วนคณิตศาสตร์ / เศษเสี้ยวส่วนน้อยนิด" },
+    { word: "FRACTURE", phonetic: "/ˈfræktʃər/", pos: "noun/verb", translation: "กระดูกหักร้าว / รอยร้าวแตกแยก" },
+    { word: "FRAGILE", phonetic: "/ˈfrædʒl/", pos: "adjective", translation: "เปราะบาง / แตกหักง่ายมาก / จิตใจอ่อนไหวง่าย" },
+    { word: "FRANCHISE", phonetic: "/ˈfræntʃaɪz/", pos: "noun/verb", translation: "สิทธิ์แฟรนไชส์ธุรกิจ / สิทธิ์ออกเสียงเลือกตั้งระบบประเทศ" },
+    { word: "FRAUD", phonetic: "/frɔːd/", pos: "noun", translation: "การฉ้อโกง / มิจฉาชีพหลอกลวงเงินคนอื่น" },
+    { word: "FRINGE", phonetic: "/frɪndʒ/", pos: "noun/adjective", translation: "ชายครุยตะเข็บเสื้อผ้า / ขอบนอกบริเวณชายขอบ" },
+    { word: "FRONTIER", phonetic: "/frʌnˈtɪr/", pos: "noun", translation: "พรมแดนประเทศ / ขอบเขตความรู้ขั้นแนวหน้าสุด" },
+    { word: "FROWN", phonetic: "/fraʊn/", pos: "verb/noun", translation: "หน้านิ่วคิ้วขมวดด้วยความไม่พอใจหรือไม่เห็นด้วย" },
+    { word: "FURIOUS", phonetic: "/ˈfjʊriəs/", pos: "adjective", translation: "โกรธจัดเป็นฟืนเป็นไฟ / รุนแรงบ้าคลั่ง" },
+    { word: "FURNISH", phonetic: "/ˈfɜːrnɪʃ/", pos: "verb", translation: "ตกแต่งเฟอร์นิเจอร์ในห้องบ้าน / จัดหาเสบียงให้" },
+    { word: "GALLON", phonetic: "/ˈɡælən/", pos: "noun", translation: "แกลลอน (หน่วยวัดปริมาตรของเหลว)" },
+    { word: "GASP", phonetic: "/ɡæsp/", pos: "verb/noun", translation: "อ้าปากค้างสูดหายใจลึกด้วยความตกใจอัศจรรย์ใจ" },
+    { word: "GAUGE", phonetic: "/ɡeɪdʒ/", pos: "noun/verb", translation: "มาตรวัดระนาบปริมาณ / ประเมินตัดสินสถานการณ์" },
+    { word: "GENRE", phonetic: "/ˈʒɑːnrə/", pos: "noun", translation: "ประเภทของงานศิลปะ ดนตรี วรรณกรรม หรือหนัง" },
+    { word: "GLAMOUR", phonetic: "/ˈɡlæmər/", pos: "noun", translation: "ความหรูหรามีเสน่ห์ดึงดูดใจน่าหลงใหล" },
+    { word: "GLARE", phonetic: "/ɡler/", pos: "verb/noun", translation: "ส่องแสงจ้าแสบตา / ถลึงตาใส่มองด้วยความโกรธจัด" },
+    { word: "GLEAM", phonetic: "/ɡliːm/", pos: "verb/noun", translation: "ส่องแสงเป็นประกายวับแวมริบหรี่สว่างใส" },
+    { word: "GLIDE", phonetic: "/ɡlaɪd/", pos: "verb/noun", translation: "ร่อนลมบินเรียบ / เคลื่อนตัวลื่นไหลนุ่มนวล" },
+    { word: "GLIMPSE", phonetic: "/ɡlɪmps/", pos: "noun/verb", translation: "เหลือบมองเห็นแวบเดียวชั่วครู่สั้นๆ" },
+    { word: "GLOOM", phonetic: "/ɡluːm/", pos: "noun", translation: "ความมืดมัวสลัวสลด / ความเศร้าโศกสิ้นหวังหดหู่ใจ" },
+    { word: "GLUE", phonetic: "/ɡluː/", pos: "noun/verb", translation: "กาว / ยึดติดแน่นไม่ยอมห่าง" },
+    { word: "GOAT", phonetic: "/ɡoʊt/", pos: "noun", translation: "แพะ / แพะรับบาปทำผิดแทน" },
+    { word: "GOSPEL", phonetic: "/ˈɡɑːspl/", pos: "noun", translation: "พระคริสตธรรมคัมภีร์ / เพลงโบสถ์กอสเปล / ความจริงแท้แน่นอน" },
+    { word: "GRAPH", phonetic: "/ɡræf/", pos: "noun/verb", translation: "กราฟ / แผนภูมิแสดงเส้นสถิติข้อมูล" },
+    { word: "GRAVEL", phonetic: "/ˈɡrævl/", pos: "noun", translation: "กรวด / เศษหินก้อนเล็กปูพื้นถนน" },
+    { word: "GRAZE", phonetic: "/ɡreɪz/", pos: "verb/noun", translation: "สัตว์เล็มกินหญ้า / ผิวถลอกครูดเบาๆ" },
+    { word: "GREASE", phonetic: "/ɡriːs/", pos: "noun/verb", translation: "น้ำมันหล่อลื่นหนา / ไขมันสัตว์ทำอาหารสกปรก" },
+    { word: "GREED", phonetic: "/ɡriːd/", pos: "noun", translation: "ความโลภโมโทสัน / ความอยากได้มากเกินพอดี" },
+    { word: "GREENHOUSE", phonetic: "/ˈɡriːnhaʊs/", pos: "noun", translation: "โรงเรือนกระจกปลูกพืช / เรือนเพาะชำ" },
+    { word: "GRIEF", phonetic: "/ɡriːf/", pos: "noun", translation: "ความทุกข์โศกเศร้าเสียใจอย่างสุดซึ้งจากการสูญเสียคนรัก" },
+    { word: "GRIM", phonetic: "/ɡrɪm/", pos: "adjective", translation: "เคร่งขรึมดูร้ายน่ากลัว / มืดมนไร้แววดี" },
+    { word: "GRIND", phonetic: "/ɡraɪnd/", pos: "verb/noun", translation: "บดละเอียด / ลับมีดให้คม / งานหนักที่น่าเบื่อหน่ายทำทุกวัน" },
+    { word: "GUERILLA", phonetic: "/ɡəˈrɪlə/", pos: "noun", translation: "กองโจร / นักรบจรยุทธ์นอกระบบทหาร" },
+    { word: "GUT", phonetic: "/ɡʌt/", pos: "noun/verb/adjective", translation: "ลำไส้พุง / ความกล้าหาญสัญชาตญาณลึกลึก" },
+    { word: "HARASS", phonetic: "/həˈræs/", pos: "verb", translation: "คุกคาม / ก่อกวนรบราให้เดือดร้อนรำคาญใจต่อเนื่อง" },
+    { word: "HASTE", phonetic: "/heɪst/", pos: "noun", translation: "ความรีบร้อน / ความเร่งรีบจนอาจซุ่มซ่าม" },
+    { word: "HATCH", phonetic: "/hætʃ/", pos: "verb/noun", translation: "ฟักไข่ออกเป็นตัว / วางแผนการลับ / ประตูช่องเปิดพื้นตู้รถใต้ดิน" },
+    { word: "HAUL", phonetic: "/hɔːl/", pos: "verb/noun", translation: "ลากดึงของหนักด้วยความยากลำบาก / ขนย้ายสินค้าใหญ่" },
+    { word: "HAUNT", phonetic: "/hɔːnt/", pos: "verb/noun", translation: "ผีสิงหลอกหลอน / ความคิดแย่หลอนติดหัวตามกวนใจ" },
+    { word: "HEIR", phonetic: "/er/", pos: "noun", translation: "ทายาทผู้สืบทอดมรดกและตำแหน่งตามกฎหมาย" },
+    { word: "HERD", phonetic: "/hɜːrd/", pos: "noun/verb", translation: "ฝูงสัตว์กินพืช (วัวควายแกะ) / ต้อนต้อนฝูงชน" },
+    { word: "HIERARCHY", phonetic: "/ˈhaɪərɑːrki/", pos: "noun", translation: "ลำดับขั้นการบังคับบัญชาตามสายงานสูงต่ำ" },
+    { word: "HOOD", phonetic: "/hʊd/", pos: "noun", translation: "หมวกคลุมหัวติดเสื้อ / ฝากระโปรงหน้ารถยนต์" },
+    { word: "HOP", phonetic: "/hɑːp/", pos: "verb/noun", translation: "กระโดดขาเดียว / กระโดดหย็องๆ สั้นสั้น" },
+    { word: "HOSTAGE", phonetic: "/ˈhɑːstɪdʒ/", pos: "noun", translation: "ตัวประกันที่ถูกจับกุมเรียกร้องค่าไถ่เงื่อนไข" },
+    { word: "HUMBLE", phonetic: "/ˈhʌmbl/", pos: "adjective/verb", translation: "นอบน้อมถ่อมตน / ต่ำต้อยฐานะธรรมดาไม่หรูหรา" },
+    { word: "HUMILIATE", phonetic: "/hjuːˈmɪlieɪt/", pos: "verb", translation: "ทำให้ขายหน้าแทรกแผ่นดินหนี / ลบหลู่เกียรติยศต่อหน้าคนอื่น" },
+    { word: "HUT", phonetic: "/hʌt/", pos: "noun", translation: "กระท่อมหลังเล็กเรียบง่าย / กระต๊อบดินไม้" },
+    { word: "IDENTICAL", phonetic: "/aɪˈdentɪkl/", pos: "adjective", translation: "เหมือนกันทุกกระเบียดนิ้ว / ฝาแฝดแท้ไข่ใบเดียวกัน" },
+    { word: "IDEOLOGICAL", phonetic: "/ˌaɪdiəˈlɑːdʒɪkl/", pos: "adjective", translation: "เกี่ยวกับอุดมการณ์ทางความคิดการเมืองหรือสังคม" },
+    { word: "IDLE", phonetic: "/ˈaɪdl/", pos: "adjective/verb", translation: "ปล่อยเวลาว่างเปล่าไร้ประโยชน์ / เครื่องยนต์เดินเบาเฉื่อยชา" },
+    { word: "IMITATE", phonetic: "/ˈɪmɪteɪt/", pos: "verb", translation: "เลียนแบบพฤติกรรม / ทำตามอย่างก๊อบปี้ท่าทาง" },
+    { word: "IMMENSE", phonetic: "/ɪˈmens/", pos: "adjective", translation: "ใหญ่โตมโหฬาร / มากมายมหาศาลอย่างยิ่ง" },
+    { word: "IMPAIR", phonetic: "/ɪmˈper/", pos: "verb", translation: "ทำให้เสื่อมคุณภาพลง / ทำลายสมรรถภาพร่างกายหรือประสาท" },
+    { word: "IMPATIENT", phonetic: "/ɪmˈpeɪʃnt/", pos: "adjective", translation: "ใจร้อน / ไม่อดทน / กระวนกระวายใจรอไม่ได้" },
+    { word: "IMPLICIT", phonetic: "/ɪmˈplɪsɪt/", pos: "adjective", translation: "เป็นที่เข้าใจตรงกันโดยนัยบอกอ้อมๆ / เชื่อใจเต็มร้อยไม่มีเงื่อนไข" },
+    { word: "IMPULSE", phonetic: "/ˈɪmpʌls/", pos: "noun", translation: "แรงขับเคลื่อนชั่ววูบ / อารมณ์นึกอยากทำทันทีไม่มีแผนล่วงหน้า" },
+    { word: "INCIDENCE", phonetic: "/ˈɪnsɪdəns/", pos: "noun", translation: "อัตราการเกิดเหตุร้ายหรือโรคภัยในกลุ่มประชากรช่วงเวลา" },
+    { word: "INCLINE", phonetic: "/ɪnˈklaɪ/", pos: "verb/noun", translation: "แนวโน้มเอียงลาด / ลาดชัน / มีใจโน้มเอียงอยากคิดทำ" },
+    { word: "INCLUSION", phonetic: "/ɪnˈkluːʒn/", pos: "noun", translation: "การนับรวมเข้ามาอยู่กลุ่มเดียวกัน / การโอบรับทุกกลุ่มสังคม" },
+    { word: "INDIFFERENT", phonetic: "/ɪnˈdɪfrənt/", pos: "adjective", translation: "เมินเฉยไม่แยแสสนใจ / เฉยๆ สบายไม่ฝักฝ่ายข้างใด" },
+    { word: "INDIGENOUS", phonetic: "/ɪnˈdɪdʒənəs/", pos: "adjective", translation: "คนพื้นเมืองดั้งเดิม / ท้องถิ่นป่าไม้ธรรมชาติแถบนั้น" },
+    { word: "INDIRECT", phonetic: "/ˌɪndaɪˈrekt/", pos: "adjective", translation: "ทางอ้อม / ไม่ตรงประเด็น / อ้อมค้อม" },
+    { word: "INDUCE", phonetic: "/ɪnˈduːs/", pos: "verb", translation: "ชักจูงหว่านล้อม / เหนี่ยวนำทำให้เกิดผลแพทย์เร่งคลอดเจ็บท้อง" },
+    { word: "INDULGE", phonetic: "/ɪnˈdʌldʒ/", pos: "verb", translation: "ตามใจตัวเองเต็มคราบ / ดื่มด่ำยอมปล่อยตัวกับความสุขตามใจอยาก" },
+    { word: "INFER", phonetic: "/ɪnˈfɜːr/", pos: "verb", translation: "อนุมานสรุปความจากหลักฐานข้อมูลแวดล้อมนัยยะ" },
+    { word: "INFINITE", phonetic: "/ˈɪnfɪnət/", pos: "adjective", translation: "อินฟินิตี้ / ไร้ขีดจำกัด / ไม่มีที่สิ้นสุดลึกสุดกู่" },
+    { word: "INFLAME", phonetic: "/ɪnˈfleɪm/", pos: "verb", translation: "ทำให้เกิดการอักเสบบวมแดงร้อน / จุดชนวนอารมณ์โกรธแค้นประทุ" },
+    { word: "INHERENT", phonetic: "/ɪnˈhɪrənt/", pos: "adjective", translation: "ซึ่งเป็นคุณสมบัติติดตัวมาแต่เกิดแยกออกไม่ได้ / ธรรมชาติเนื้อแท้" },
+    { word: "INHIBIT", phonetic: "/ɪnˈhɪbɪt/", pos: "verb", translation: "ยับยั้งกั้นขวาง / ขัดขวางกระบวนการทางเคมีพฤติกรรม" },
+    { word: "INN", phonetic: "/ɪn/", pos: "noun", translation: "โรงแรมขนาดเล็กตามต่างจังหวัดชานเมือง / โรงเตี๊ยมที่พักแรม" },
+    { word: "INSULATE", phonetic: "/ˈɪnsəleɪt/", pos: "verb", translation: "ฉนวนกั้นความร้อนเสียงไฟฟ้าไม่ให้ผ่าน / แยกตัดขาดสิ่งภายนอก" },
+    { word: "INSULT", phonetic: "/ɪnˈsʌlt/", pos: "verb/noun", translation: "สบประมาทดูหมิ่นเหยียดหยามน้ำใจต่อหน้าสบตา" },
+    { word: "INTACT", phonetic: "/ɪnˈtækt/", pos: "adjective", translation: "อยู่รอดปลอดภัยครบถ้วนสมบูรณ์แบบไม่มีตำหนิพังทลายรอยขีดข่วน" },
+    { word: "INTEGRAL", phonetic: "/ˈɪntɪɡrəl/", pos: "adjective", translation: "ซึ่งสำคัญขาดไม่ได้เป็นส่วนประกอบหลักภายในระบบองค์รวม" },
+    { word: "INTEGRITY", phonetic: "/ɪnˈteɡrəti/", pos: "noun", translation: "ความซื่อสัตย์สุจริตยึดมั่นหลักศีลธรรม / ความสมบูรณ์แข็งแกร่งโครงสร้าง" },
+    { word: "INTERFACE", phonetic: "/ˈɪntərfeɪs/", pos: "noun/verb", translation: "หน้าจอประสานงานผู้ใช้ระบบคอมพิวเตอร์ / จุดเชื่อมต่อเชื่อมโยงคู่" },
+    { word: "INTERIM", phonetic: "/ˈɪntərɪm/", pos: "adjective/noun", translation: "ช่วงเวลาชั่วคราวรอกรรมการจริง / รัฐบาลรักษาการเฉพาะกิจ" },
+    { word: "INTERVAL", phonetic: "/ˈɪntərvl/", pos: "noun", translation: "ช่วงเวลาระหว่างกิจกรรม / พักครึ่งเวลาดูละครคอนเสิร์ต" },
+    { word: "INTIMIDATE", phonetic: "/ɪnˈtɪmɪdeɪt/", pos: "verb", translation: "ข่มขู่ทำให้กลัวขวัญผวาเพื่อบังคับทำตามสั่ง" },
+    { word: "INTRIGUE", phonetic: "/ɪnˈtriːɡ/", pos: "verb/noun", translation: "ทำให้สนใจใคร่รู้อย่างแรง / วางแผนลับหักหลังลักลอบตลบหลังศัตรู" },
+    { word: "INVADE", phonetic: "/ɪnˈveɪd/", pos: "verb", translation: "บุกรุกดินแดน / รุกรานบ้านเมือง / ก้าวล่วงพื้นที่ส่วนบุคคล" },
+    { word: "INVOKE", phonetic: "/ɪnˈvoʊk/", pos: "verb", translation: "อ้างอิงกฎหมายสิทธิ์ใช้บังคับ / อ้อนวอนสวดมนต์ขอพรสิ่งศักดิ์สิทธิ์" },
+    { word: "IRRITATION", phonetic: "/ˌɪrɪˈteɪʃn/", pos: "noun", translation: "ความระคายเคืองผิวบวมแดง / ความหงุดหงิดกวนใจโมโหเล็กรำคาญ" },
+    { word: "JERK", phonetic: "/dʒɜːrk/", pos: "verb/noun", translation: "กระตุกดึงอย่างรวดเร็วฉับพลัน / คนงี่เง่าไร้มารยาทคำด่า" },
+    { word: "JUDICIAL", phonetic: "/dʒuˈdɪʃl/", pos: "adjective", translation: "เกี่ยวกับศาลสถิตยุติธรรมหรือผู้พิพากษาคดีระเบียบการสืบสวน" },
+    { word: "JURISDICTION", phonetic: "/ˌdʒʊrɪsˈdɪkʃn/", pos: "noun", translation: "เขตอำนาจศาลระเบียบกฎหมายพื้นที่ดูแลบังคับคดีเด็ดขาด" },
+    { word: "JUVENILE", phonetic: "/ˈdʒuːvənl/", pos: "adjective/noun", translation: "เยาวชนเด็กวัยรุ่นอายุไม่เกินเกณฑ์ตามกฎหมายอาญา" },
+    { word: "KIN", phonetic: "/kɪn/", pos: "noun", translation: "ญาติสนิทเกี่ยวดองทางสายเลือดเผ่าพันธุ์วงศ์วานเดียวกัน" },
+    { word: "KIT", phonetic: "/kɪt/", pos: "noun", translation: "ชุดเครื่องมืออุปกรณ์ปฐมพยาบาลประกอบสำเร็จรูปใช้งานเฉพาะทาง" },
+    { word: "KNEEL", phonetic: "/niːl/", pos: "verb", translation: "คุกเข่าลงพื้นราบแสดงความเคารพหรือทำกิจกรรม" },
+    { word: "LACE", phonetic: "/leɪs/", pos: "noun/verb", translation: "ผ้าลูกไม้ตะเข็บฉลุโปร่ง / สายผูกเชือกรองเท้าบูท" },
+    { word: "LANDLORD", phonetic: "/ˈlændlɔːrd/", pos: "noun", translation: "เจ้าของที่ดินบ้านเช่าหอพักผู้เก็บค่าเช่ารายเดือน" },
+    { word: "LAP", phonetic: "/læp/", pos: "noun/verb", translation: "หน้าตักเวลานั่งลง / วิ่งว่ายน้ำครบรอบสนามหนึ่งเที่ยว" },
+    { word: "LEGISLATURE", phonetic: "/ˈledʒɪsleɪtʃər/", pos: "noun", translation: "สภานิติบัญญัติรัฐสภาผู้มีอำนาจออกกฎหมายบ้านเมืองประเทศ" },
+    { word: "LEISURE", phonetic: "/ˈliːʒər/", pos: "noun/adjective", translation: "เวลาว่างยามว่างพักผ่อนหย่อนใจตามอัธยาศัยชิลๆ" },
+    { word: "LEVER", phonetic: "/ˈlevər/", pos: "noun/verb", translation: "คานดีดคานงัด / คันโยกเกียร์ควบคุมเครื่องจักรกลยานยนต์" },
+    { word: "LICK", phonetic: "/lɪk/", pos: "verb/noun", translation: "เลียด้วยลิ้นชิมไอติมรสหวาน" },
+    { word: "LIEUTENANT", phonetic: "/luːˈtenənt/", pos: "noun", translation: "ร้อยโททหารบก / เรือโททหารเรือ" },
+    { word: "LIKEWISE", phonetic: "/ˈlaɪkwaɪz/", pos: "adverb", translation: "เช่นเดียวกันในทำนองเดียวกันคำเชื่อมข้อความประโยค" },
+    { word: "LIMB", phonetic: "/lɪm/", pos: "noun", translation: "รยางค์ร่างกายมนุษย์สัตว์ (แขนขา) / กิ่งก้านต้นไม้ใหญ่" },
+    { word: "LINEAR", phonetic: "/ˈlɪniər/", pos: "adjective", translation: "เชิงเส้นตรงเป็นแนวเส้นตรงต่อเนื่องยาวไปเป็นระบบตรงตัว" },
+    { word: "LINGER", phonetic: "/ˈlɪŋɡər/", pos: "verb", translation: "อ้อยอิ่งเดินเฉื่อยชาไม่อยากจากไป / อาการป่วยยืดเยื้อเรื้อรังยังไม่หายดี" },
+    { word: "LINGUISTIC", phonetic: "/lɪŋˈɡwɪstɪk/", pos: "adjective", translation: "เกี่ยวกับภาษาศาสตร์หรือโครงสร้างระบบไวยากรณ์ภาษาพูดเขียน" },
+    { word: "LITERACY", phonetic: "/ˈlɪtərəsi/", pos: "noun", translation: "การอ่านออกเขียนได้ความรู้พื้นฐานหนังสือกราฟข้อมูลศึกษา" },
+    { word: "LIVELY", phonetic: "/ˈlaɪvli/", pos: "adjective", translation: "กระปรี้กระเปร่ามีชีวิตชีวาครื้นเครงร่าเริงแจ่มใสสนุกสนาน" },
+    { word: "LONGING", phonetic: "/ˈlɔːŋɪŋ/", pos: "noun/adjective", translation: "ความปรารถนาอย่างแรงกล้าความโหยหาคิดถึงสิ่งไกลตัวใจจะขาด" },
+    { word: "LOOM", phonetic: "/luːm/", pos: "verb/noun", translation: "ปรากฏร่างเงาขนาดใหญ่ทึมๆ น่ากลัวลอยมาใกล้ / เครื่องทอผ้ากี่" },
+    { word: "LOUNGE", phonetic: "/laʊndʒ/", pos: "noun/verb", translation: "ห้องนั่งเล่นพักผ่อนโซฟาหรูสนามบิน / นั่งเอนหลังเอื่อยเฉื่อยผ่อนคลาย" },
+    { word: "LUNG", phonetic: "/lʌŋ/", pos: "noun", translation: "ปอดอวัยวะฟอกหายใจระบบภายในหน้าอก" },
+    { word: "MANDATE", phonetic: "/ˈmændeɪt/", pos: "noun/verb", translation: "คำสั่งอย่างเป็นทางการจากสภามติชน / อำนาจที่ได้รับมอบหมายทำงานประเทศ" },
+    { word: "MANUSCRIPT", phonetic: "/ˈmænjuskrɪpt/", pos: "noun", translation: "ต้นฉบับลายมือเขียนหนังสือก่อนจัดพิมพ์จริงโบราณคดีเอกสาร" },
+    { word: "MARBLE", phonetic: "/ˈmɑːrbl/", pos: "noun", translation: "หินอ่อนลายสวยใช้ปูพื้นสร้างตึก / ลูกแก้วเด็กเล่นกลมๆ" },
+    { word: "MARCHED", phonetic: "/mɑːrtʃt/", pos: "verb (past)", translation: "เดินพาเหรดสวนสนามทหารเป็นแถวตรงจังหวะ / เดินหน้ามุ่งมั่นโกรธจัด" },
+    { word: "MAT", phonetic: "/mæt/", pos: "noun", translation: "เสื่อปูนั่ง / พรมเช็ดเท้าผืนเล็กวางพื้นบ้าน" },
+    { word: "MAXIMISE", phonetic: "/ˈmæksɪmaɪz/", pos: "verb", translation: "ขยายทำประโยชน์ใช้สอยผลกำไรให้ได้มากที่สุดสูงสุดขีด" },
+    { word: "MEANTIME", phonetic: "/ˈmiːntaɪม/", pos: "noun/adverb", translation: "ในระหว่างเวลาช่วงนั้นพรางๆ ระหว่างรอเหตุการณ์หลัก" },
+    { word: "MEDAL", phonetic: "/ˈmedl/", pos: "noun", translation: "เหรียญรางวัลชนะเลิศการแข่งขันกีฬาหรือเหรียญกล้าหาญทหารรบ" },
+    { word: "MEDIATE", phonetic: "/ˈmiːdieɪt/", pos: "verb", translation: "ไกล่เกลี่ยข้อพิพาททำตัวเป็นคนกลางประสานเจรจาสงบศึกคู่ความ" },
+    { word: "MEDIEVAL", phonetic: "/ˌmediˈiːvl/", pos: "adjective", translation: "ยุคกลางของประวัติศาสตร์ยุโรป (ยุคอัศวินปราสาทราชวังและดาบเหล็ก)" },
+    { word: "MERCHANT", phonetic: "/ˈmɜːrtʃənt/", pos: "noun/adjective", translation: "พ่อค้าวานิชนักธุรกิจขนส่งค้าขายสินค้าเรือเดินสมุทรข้ามต่างแดน" },
+    { word: "MERIT", phonetic: "/ˈmerɪt/", pos: "noun/verb", translation: "คุณงามความดี / บุญกุศล / ข้อดีความดีความชอบควรได้รับคำชมสิทธิ์" },
+    { word: "METAPHOR", phonetic: "/ˈmetəfɔːr/", pos: "noun", translation: "อุปลักษณ์คำอุปมาเปรียบเทียบสิ่งหนึ่งเป็นอีกสิ่งตรงๆ โดยไม่ใช้คำว่าเหมือน" },
+    { word: "METROPOLITAN", phonetic: "/ˌmetrəˈpɑːlɪtən/", pos: "adjective/noun", translation: "เกี่ยวกับมหานครเมืองหลวงขนาดใหญ่ศูนย์รวมความเจริญเขตเทศบาลนคร" },
+    { word: "MILITANT", phonetic: "/ˈmɪlɪtənt/", pos: "adjective/noun", translation: "หัวรุนแรงพร้อมใช้กำลังอาวุธต่อสู้ประท้วงเรียกร้องสิทธิ์นโยบายขวาจัด" },
+    { word: "MILLIGRAM", phonetic: "/ˈmɪlɪɡræm/", pos: "noun", translation: "มิลลิกรัม (หน่วยน้ำหนักย่อยขนาดเล็กมากหนึ่งในล้านของกิโลกรัม)" },
+    { word: "MINIMAL", phonetic: "/ˈmɪnɪməl/", pos: "adjective", translation: "น้อยที่สุดน้อยมากแทบไม่มีขีดสุดจำกัด / สไตล์มินิมอลเรียบง่าย" },
+    { word: "MINIMISE", phonetic: "/ˈmɪnɪmaɪz/", pos: "verb", translation: "ลดขนาดความเสี่ยงความเสียหายข้อผิดพลาดให้เหลือเหลือน้อยที่สุด" },
+    { word: "MISERABLE", phonetic: "/ˈmɪzrəbl/", pos: "adjective", translation: "เป็นทุกข์น่าเวทนาเศร้าหมองหดหู่ใจอย่างหนัก / สภาพอากาศย่ำแย่เปียกปอน" },
+    { word: "MIST", phonetic: "/mɪst/", pos: "noun/verb", translation: "หมอกบางละอองน้ำไอบางใสสลัวตามทุ่งหญ้าใบไม้ตอนเช้าตรู่" },
+    { word: "MOBILISE", phonetic: "/ˈmoʊbəlaɪz/", pos: "verb", translation: "ระดมพลกำลังทหารรวมกลุ่มประชาชนออกมาทำกิจกรรมภารกิจด่วนประเทศ" },
+    { word: "MOCK", phonetic: "/mɑːk/", pos: "verb/noun/adjective", translation: "เยาะเย้ยล้อเลียนถากถาง / ข้อสอบจำลองซ้อมมือนั่งทำก่อนลงสนามจริง" },
+    { word: "MONETARY", phonetic: "/ˈmɑːnɪteri/", pos: "adjective", translation: "เกี่ยวกับเงินตราหรือนโยบายระบบการเงินควบคุมดอกเบี้ยประเทศคลัง" },
+    { word: "MONUMENT", phonetic: "/ˈmɑːnjumənt/", pos: "noun", translation: "อนุสาวรีย์อนุสรณ์สถานสร้างเพื่อระลึกถึงบุคคลสำคัญประวัติศาสตร์วีรชน" },
+    { word: "MOULD", phonetic: "/moʊld/", pos: "noun/verb", translation: "แม่พิมพ์หล่อรูปเค้กเหล็ก / เชื้อราเขียวตามขนมปังเก่า / หล่อหลอมนิสัย" },
+    { word: "MOURN", phonetic: "/mɔːrn/", pos: "verb", translation: "ไว้อาลัยแสดงความเศร้าโศกเสียใจอย่างเป็นทางการต่อการจากไปของคนรัก" },
+    { word: "MS", phonetic: "/mɪz/", pos: "abbreviation", translation: "นางหรือนางสาว (คำนำหน้าชื่อผู้หญิงโดยไม่ระบุสถานะสมรสแต่งงาน)" },
+    { word: "MULTIPLY", phonetic: "/ˈmʌltɪplaɪ/", pos: "verb", translation: "คูณเลขคณิตศาสตร์ / เพิ่มจำนวนทวีคูณอย่างรวดเร็วขยายพันธุ์เพิ่ม" },
+    { word: "MUNICIPAL", phonetic: "/mjuːˈnɪsɪpl/", pos: "adjective", translation: "เกี่ยวกับเทศบาลนครหลวงบริหารจัดการท้องถิ่นชุมชนเมืองนั้นๆ" },
+    { word: "MURMUR", phonetic: "/ˈmɜːrmər/", pos: "noun/verb", translation: "เสียงพึมพำบ่นเบาๆ ในลำคอไม่ได้ศัพท์เสียงน้ำไหลลมโชยแผ่วๆ" },
+    { word: "MUSHROOM", phonetic: "/ˈmʌʃrʊm/", pos: "noun/verb", translation: "เห็ดพืชไม่มีคลอโรฟิลล์กินได้พิษ / ผุดขึ้นมาจำนวนมากรวดเร็วเป็นดอกเห็ด" },
+    { word: "MUTTER", phonetic: "/ˈmʌtər/", pos: "verb/noun", translation: "บ่นพึมพำพ่นคำด่าไม่พอใจเบาๆ คนเดียวเสียงงึมงำในลำคอ" },
+    { word: "NAVIGATE", phonetic: "/ˈnævɪɡeɪt/", pos: "verb", translation: "นำทางชี้เส้นทางกัปตันเรือขับรถเปิดแผนที่จีพีเอสเดินเรือหาทิศ" },
+    { word: "NECESSITY", phonetic: "/nəˈsesəti/", pos: "noun", translation: "ความจำเป็นอย่างยิ่งยวดสิ่งของปัจจัยสี่ขาดไม่ได้ในการดำรงชีวิตรอด" },
+    { word: "NEEDLE", phonetic: "/ˈniːdl/", pos: "noun/verb", translation: "เข็มเย็บผ้าเข็มฉีดยาแพทย์ฝังเข็ม / เข็มทิศหน้าปัดวัดระนาบระบุทิศ" },
+    { word: "NOBLE", phonetic: "/ˈnoʊbl/", pos: "adjective/noun", translation: "สูงส่งด้วยคุณธรรมมีเกียรติ / ขุนนางชั้นสูงตระกูลผู้ดีเก่าเก่าประเทศ" },
+    { word: "NONETHELESS", phonetic: "/ˌnʌnðəˈles/", pos: "adverb", translation: "แต่อย่างไรก็ตามถึงกระนั้นก็ตามทีคำเชื่อมขัดแย้งข้อความเดิม" },
+    { word: "NONSENSE", phonetic: "/ˈnɑːnsens/", pos: "noun/exclamation", translation: "เรื่องไร้สาระพูดจาไม่เป็นท่าเหลวไหลไม่มีเหตุผลหลักการรองรับ" },
+    { word: "NOON", phonetic: "/nuːn/", pos: "noun", translation: "เที่ยงตรงเวลาสิบสองนาฬิกากลางวันแดดแผดเผาหัวพอดี" },
+    { word: "NORM", phonetic: "/nɔːrm/", pos: "noun", translation: "บรรทัดฐานสังคมมาตรฐานทั่วไปตามปกติวิสัยที่คนส่วนใหญ่ยอมรับทำตาม" },
+    { word: "NOTORIOUS", phonetic: "/noʊˈtɔːriəs/", pos: "adjective", translation: "ชื่อเสียงโด่งดังในทางเสื่อมเสียย่ำแย่โจรผู้ร้ายขึ้นชื่อลือชาเรื่องร้าย" },
+    { word: "NOUGHT", phonetic: "/nɔːt/", pos: "noun/number", translation: "เลขศูนย์เลขความว่างเปล่าไม่มีค่าไม่มีอะไรเลยพังหมด" },
+    { word: "NUTRITION", phonetic: "/nuːˈtrɪʃn/", pos: "noun", translation: "โภชนาการสารอาหารคลังพลังงานร่างกายระบบดูดซึมอาหารดีดี" },
+    { word: "OBEY", phonetic: "/əˈbeɪ/", pos: "verb", translation: "เชื่อฟังปฏิบัติตามคำสั่งยอมทำตามกฎระเบียบวินัยเคร่งครัดผู้ใหญ่" },
+    { word: "OBSCURE", phonetic: "/əbˈskjʊr/", pos: "adjective/verb", translation: "มืดมนคลุมเครือไม่ชื่อดังไม่มีคนรู้จัก / บดบังสายตาทำให้มองไม่เห็น" },
+    { word: "OBSESS", phonetic: "/əbˈses/", pos: "verb", translation: "หมกมุ่นคลั่งไคล้ติดตราตรึงใจคิดถึงตลอดเวลาจนไม่เป็นอันทำอะไร" },
+    { word: "OBSTACLE", phonetic: "/ˈɑːbstəkl/", pos: "noun", translation: "อุปสรรคขวากหนามสิ่งกีดขวางเส้นทางความสำเร็จทำให้อืดอาดล่าช้า" },
+    { word: "OBSTRUCT", phonetic: "/əbˈstrʌkt/", pos: "verb", translation: "กีดขวางทางสัญจรบล็อกเส้นทางรถวิ่ง / ขัดขวางกระบวนการยุติธรรมสืบสวน" },
+    { word: "ODOUR", phonetic: "/ˈoʊdər/", pos: "noun", translation: "กลิ่นไม่พึงประสงค์กลิ่นเหม็นอับกลิ่นตัวสารเคมีฉุนฉุน" },
+    { word: "OFFSET", phonetic: "/ˈɔːfset/", pos: "verb/noun", translation: "ชดเชยหักลบกลบหนี้คาร์บอนเครดิตทำสิ่งดีเพื่อชดเชยข้อผิดพลาดเก่า" },
+    { word: "OMIT", phonetic: "/əˈmɪt/", pos: "verb", translation: "ละเว้นตัดออกข้ามไปไม่นับรวมใส่เข้าไปในรายงานข้อความตัวเลข" },
+    { word: "ONGOING", phonetic: "/ˈɑːnɡoʊɪŋ/", pos: "adjective", translation: "ที่กำลังดำเนินอยู่ต่อเนื่องไม่หยุดยั้งโปรเจกต์งานพัฒนาวิจัยคดี" },
+    { word: "OPPRESS", phonetic: "/əˈpres/", pos: "verb", translation: "กดขี่ข่มเหงใช้อำนาจไม่เป็นธรรมจำกัดสิทธิ์รีดนาทาเร้นประชาชนผู้น้อย" },
+    { word: "OPT", phonetic: "/ɑːpt/", pos: "verb", translation: "เลือกตัดสินใจเลือกทางใดทางหนึ่งจากตัวเลือกที่มีอยู่วางระบบไว้" },
+    { word: "OPTIMIST", phonetic: "/ˈɑːptɪmɪst/", pos: "noun", translation: "คนมองโลกในแง่ดีคิดบวกเสมอเชื่อว่าทุกปัญหามีทางออกงดงาม" },
+    { word: "ORBIT", phonetic: "/ˈɔːrbɪt/", pos: "noun/verb", translation: "วงโคจรรอบดวงดาวอวกาศโลก / โคจรรอบเคลื่อนที่ไปรอบๆ จุดศูนย์กลาง" },
+    { word: "ORCHESTRA", phonetic: "/ˈɔːrkɪstrə/", pos: "noun", translation: "วงดนตรีออร์เคสตราวงดุริยางค์สากลเครื่องดนตรีคลาสสิกจำนวนมาก" },
+    { word: "ORIGINATE", phonetic: "/əˈrɪdʒɪneɪt/", pos: "verb", translation: "มีต้นกำเนิดมาจากริเริ่มเกิดขึ้นครั้งแรก ณ จุดพื้นที่ประวัติศาสตร์หนึ่ง" },
+    { word: "ORTHODOX", phonetic: "/ˈɔːrθədɑːks/", pos: "adjective", translation: "หัวโบราณดั้งเดิมยึดมั่นขนบธรรมเนียมเก่าเคร่งครัดตามระบบตำราศาสนาดั้งเดิม" },
+    { word: "OUNCE", phonetic: "/aʊns/", pos: "noun", translation: "ออนซ์ (หน่วยน้ำหนักวัดย่อยขนาดเล็กอิมพีเรียลเทียบทองคำของเหลว)" },
+    { word: "OUTFIT", phonetic: "/ˈaʊtfɪt/", pos: "noun/verb", translation: "ชุดแต่งกายเสื้อผ้าครบเซ็ตหมวกยันรองเท้า / ทีมงานหน่วยงานกลุ่มเล็กทำงานร่วมกัน" },
+    { word: "PACKET", phonetic: "/ˈpækɪt/", pos: "noun", translation: "ซองเล็กๆ ห่อเล็กๆ ใส่ขนมซอสยา / แพ็กเก็ตข้อมูลวิ่งในระบบเน็ตเวิร์ก" },
+    { word: "PATENT", phonetic: "/ˈpætnt/", pos: "noun/verb/adjective", translation: "สิทธิบัตรคุ้มครองสิ่งประดิษฐ์งานวิจัยลิขสิทธิ์ / ชัดแจ้งเห็นได้ชัดเจนมาก" },
+    { word: "PATIENCE", phonetic: "/ˈpeɪʃns/", pos: "noun", translation: "ความอดทนอดกลั้นใจเย็นเยือกคุมอารมณ์ได้ดีเยี่ยมระหว่างรอคอยยาวนาน" },
+    { word: "PATRIOT", phonetic: "/ˈpeɪtriət/", pos: "noun", translation: "ผู้รักชาติรักแผ่นดินเกิดยอมเสียสละทำทุกสิ่งเพื่อความมั่นคงประเทศตัว" },
+    { word: "PATROL", phonetic: "/pəˈtroʊl/", pos: "noun/verb", translation: "การเดินตรวจตราลาดตระเวนตำรวจทหารรักษาความปลอดภัยป้องกันเหตุร้ายพื้นที่" },
+    { word: "PATRON", phonetic: "/ˈpeɪtrən/", pos: "noun", translation: "ผู้อุปถัมภ์ค้ำชูสนับสนุนเงินทุนงานศิลป์ / ลูกค้าประจำร้านค้าบาร์ร้านหนังสือ" },
+    { word: "PEARL", phonetic: "/pɜːrl/", pos: "noun", translation: "ไข่มุกอัญมณีล้ำค่าจากหอยนางรมก้นทะเลลึกสีขาวนวลเงางาม" },
+    { word: "PECULIAR", phonetic: "/pɪˈkjuːliər/", pos: "adjective", translation: "แปลกประหลาดจำเพาะตัวพิลึกกึกกือไม่เหมือนชาวบ้านทั่วไปมีเอกลักษณ์แปลกแปลก" },
+    { word: "PEEL", phonetic: "/piːl/", pos: "verb/noun", translation: "ปอกเปลือกผลไม้กล้วยส้ม / เปลือกผิวลอกออกแดดเผาไหม้ลอกเป็นแผ่น" },
+    { word: "PEERED", phonetic: "/pɪrd/", pos: "verb (past)", translation: "เพ่งมองมองหาด้วยความตั้งใจหรี่ตาตรวจตราท่ามกลางความมืดมัว" },
+    { word: "PENETRATE", phonetic: "/ˈpenətreɪt/", pos: "verb", translation: "เจาะทะลุทะลวงเข้าสู้เนื้อในแทรกซึมข้ามผ่านกำแพงตลาดอุปสรรคหนา" },
+    { word: "PERIPHERY", phonetic: "/pəˈrɪfəri/", pos: "noun", translation: "บริเวณรอบนอกชายขอบพื้นที่ชานเมืองส่วนที่ไม่ใช่แกนกลางหัวใจสำคัญตึก" },
+    { word: "PILGRIM", phonetic: "/ˈpɪlɡrɪm/", pos: "noun", translation: "ผู้แสวงบุญเดินทางไกลจาริกแสวงบุญสู่ศาสนสถานศักดิ์สิทธิ์ตามความเชื่อ" },
+    { word: "PILL", phonetic: "/pɪl/", pos: "noun", translation: "ยาเม็ดกลมเม็ดยารักษาโรคภัยแก้ไขปัญหาสุขภาพ" },
+    { word: "PINCH", phonetic: "/pɪntʃ/", pos: "verb/noun", translation: "หยิกผิวเนื้อเจ็บ / หยิบมือเดียวจำนวนนิดเดียวเติมเกลือปลายช้อนปรุงรส" },
+    { word: "PLAGUE", phonetic: "/pleɪɡ/", pos: "noun/verb", translation: "กาฬโรคโรคระบาดร้ายแรงคร่าชีวิตคนจำนวนมาก / ตามหลอกหลอนกวนใจสร้างปัญหาต่อเนื่อง" },
+    { word: "PLAINTIFF", phonetic: "/ˈpleɪntɪf/", pos: "noun", translation: "โจทก์ผู้ฟ้องร้องยื่นฟ้องคดีต่อศาลสถิตยุติธรรมเรียกร้องสิทธิ์เสียหาย" },
+    { word: "PLEA", phonetic: "/pliː/", pos: "noun", translation: "คำให้การจำเลยจำนนในศาล / คำร้องขอวิงวอนความเห็นอกเห็นใจอย่างจริงจังเร่งด่วน" },
+    { word: "PLEAD", phonetic: "/pliːd/", pos: "verb", translation: "ให้การสู้คดีชั้นศาล / ร้องขอวิงวอนด้วยน้ำตานองหน้าขอความเมตตากรุณา" },
+    { word: "PLEDGE", phonetic: "/pledʒ/", pos: "noun/verb", translation: "คำมั่นสัญญา / ให้สัญญา" },
+    { word: "PLUNGE", phonetic: "/plʌndʒ/", pos: "verb/noun", translation: "ดิ่งลง / พุ่งเข้าใส่ / ลดลงอย่างรวดเร็ว" },
+    { word: "PLURAL", phonetic: "/ˈplʊrəl/", pos: "adjective/noun", translation: "พหูพจน์ / เกี่ยวกับจำนวนมากกว่าหนึ่ง" },
+    { word: "POKE", phonetic: "/poʊk/", pos: "verb/noun", translation: "แหย่ / แยง / จิ้ม" },
+    { word: "PORTFOLIO", phonetic: "/pɔːrtˈfoʊlioʊ/", pos: "noun", translation: "แฟ้มสะสมผลงาน / หลักทรัพย์การลงทุน" },
+    { word: "PORTRAY", phonetic: "/pɔːrˈtreɪ/", pos: "verb", translation: "พรรณนา / วาดภาพ / แสดงบทบาท" },
+    { word: "POSTPONE", phonetic: "/poʊstˈpoʊn/", pos: "verb", translation: "เลื่อนเวลาออกไป" },
+    { word: "PREACH", phonetic: "/priːtʃ/", pos: "verb", translation: "เทศนา / สั่งสอน" },
+    { word: "PRECIOUS", phonetic: "/ˈpreʃəs/", pos: "adjective", translation: "ล้ำค่า / มีค่ายิ่ง" },
+    { word: "PREDATOR", phonetic: "/ˈpredətər/", pos: "noun", translation: "ผู้ล่า / สัตว์นักล่า" },
+    { word: "PREDECESSOR", phonetic: "/ˈpredəsesər/", pos: "noun", translation: "ผู้ทำงานก่อนหน้า / สิ่งที่มีอยู่ก่อน / บรรพบุรุษ" },
+    { word: "PREDOMINANT", phonetic: "/prɪˈdɑːmɪnənt/", pos: "adjective", translation: "ที่มีอำนาจเหนือกว่า / เด่น / มีมากกว่า" },
+    { word: "PREJUDICE", phonetic: "/ˈpredʒʊdɪs/", pos: "noun/verb", translation: "ความอคติ / ความลำเอียง" },
+    { word: "PRELIMINARY", phonetic: "/prɪˈlɪmɪneri/", pos: "adjective/noun", translation: "ในขั้นต้น / เบื้องต้น / ขั้นเตรียมการ" },
+    { word: "PREMIER", phonetic: "/prɪˈmɪr/", pos: "noun/adjective", translation: "นายกรัฐมนตรี / ชั้นนำ / อันดับหนึ่ง" },
+    { word: "PREMIUM", phonetic: "/ˈpriːmiəm/", pos: "noun/adjective", translation: "เบี้ยประกันภัย / เงินโบนัส / คุณภาพพิเศษ" },
+    { word: "PREOCCUPY", phonetic: "/priˈɑːkjupaɪ/", pos: "verb", translation: "ทำให้หมกมุ่น / ครอบงำจิตใจ" },
+    { word: "PRESCRIBE", phonetic: "/prɪˈskraɪ/", pos: "verb", translation: "สั่งยา / ออกกฎเกณฑ์" },
+    { word: "PRESCRIPTION", phonetic: "/prɪˈskrɪpʃn/", pos: "noun", translation: "ใบสั่งยา / ตำรับยา" },
+    { word: "PRESIDENCY", phonetic: "/ˈprezɪdənsi/", pos: "noun", translation: "ตำแหน่งประธานาธิบดี / วาระการดำรงตำแหน่ง" },
+    { word: "PRESTIGE", phonetic: "/preˈstiːʒ/", pos: "noun", translation: "บารมี / เกียรติยศ / ชื่อเสียง" },
+    { word: "PREVAIL", phonetic: "/prɪˈveɪl/", pos: "verb", translation: "มีชัยชนะ / แพร่หลาย / มีผลเหนือกว่า" },
+    { word: "PREVALENT", phonetic: "/ˈprevələnt/", pos: "adjective", translation: "ที่พบได้บ่อย / แพร่หลาย / ทั่วไป" },
+    { word: "PRIMITIVE", phonetic: "/ˈprɪmətɪv/", pos: "adjective/noun", translation: "ดั้งเดิม / แบบโบราณ / ขาดการพัฒนา" },
+    { word: "PRIVATISE", phonetic: "/ˈpraɪvətaɪz/", pos: "verb", translation: "แปรรูปวิสาหกิจของรัฐเป็นของเอกชน" },
+    { word: "PROCLAIM", phonetic: "/prəˈkleɪm/", pos: "verb", translation: "ประกาศ / แถลงการณ์อย่างเป็นทางการ" },
+    { word: "PROLONG", phonetic: "/prəˈlɔːŋ/", pos: "verb", translation: "ยืดเวลาออกไป / ทำให้ยาวนานขึ้น" },
+    { word: "PROP", phonetic: "/prɑːp/", pos: "noun/verb", translation: "ค้ำจุน / เสาคำ / อุปกรณ์ประกอบฉาก" },
+    { word: "PROPOSITION", phonetic: "/ˌprɑːpəˈzɪʃn/", pos: "noun", translation: "ข้อเสนอ / การเสนอแนะ" },
+    { word: "PROSTITUTE", phonetic: "/ˈprɑːstətuːt/", pos: "noun/verb", translation: "โสเภณี / หญิงบริการ" },
+    { word: "PUBLICITY", phonetic: "/pʌbˈlɪsəti/", pos: "noun", translation: "การประชาสัมพันธ์ / สื่อเผยแพร่ข่าวสาร" },
+    { word: "PULSE", phonetic: "/pʌls/", pos: "noun/verb", translation: "ชีพจร / จังหวะเต้นของหัวใจ" },
+    { word: "RACK", phonetic: "/ræk/", pos: "noun/verb", translation: "ชั้นวางของ / ราวแขวน / ทรมาน" },
+    { word: "RAM", phonetic: "/ræm/", pos: "noun/verb", translation: "แกะตัวผู้ / พุ่งชนอย่างแรง" },
+    { word: "RATTLE", phonetic: "/ˈrætl/", pos: "verb/noun", translation: "เขย่าให้เกิดเสียงรัว / เสียงกริ๊กๆ" },
+    { word: "REALM", phonetic: "/relm/", pos: "noun", translation: "ขอบเขต / อาณาจักร" },
+    { word: "RECIPIENT", phonetic: "/rɪˈsɪpiənt/", pos: "noun", translation: "ผู้รับ" },
+    { word: "RECONCILE", phonetic: "/ˈrekənsaɪl/", pos: "verb", translation: "ประนีประนอม / ปรับความเข้าใจกัน" },
+    { word: "RECREATION", phonetic: "/ˌrekriˈeɪʃn/", pos: "noun", translation: "นันทนาการ / การพักผ่อนหย่อนใจ" },
+    { word: "RECUR", phonetic: "/rɪˈkɜːr/", pos: "verb", translation: "เกิดขึ้นอีก / กลับมาเกิดซ้ำ" },
+    { word: "REFINE", phonetic: "/rɪˈfaɪn/", pos: "verb", translation: "กลั่น / ทำให้บริสุทธิ์ / ขัดเกลา" },
+    { word: "REGAIN", phonetic: "/rɪˈɡeɪn/", pos: "verb", translation: "ได้กลับคืนมา / ชิงคืน" },
+    { word: "REGRESS", phonetic: "/rɪˈɡres/", pos: "verb/noun", translation: "ถดถอย / แย่ลง" },
+    { word: "REHABILITATE", phonetic: "/ˌriːəˈbɪlɪteɪt/", pos: "verb", translation: "ฟื้นฟูสมรรถภาพ / บำบัดรักษาให้กลับสู่สภาพเดิม" },
+    { word: "REHEARSE", phonetic: "/rɪˈhɜːrs/", pos: "verb", translation: "ซ้อม (ละคร/ดนตรี) / ฝึกซ้อม" },
+    { word: "REIGN", phonetic: "/reɪn/", pos: "noun/verb", translation: "การครองราชย์ / ยุคสมัยที่ปกครอง" },
+    { word: "RELEVANCE", phonetic: "/ˈreləvəns/", pos: "noun", translation: "ความเกี่ยวข้อง / ความตรงประเด็น" },
+    { word: "REPAY", phonetic: "/rɪˈpeɪ/", pos: "verb", translation: "ชำระเงินคืน / ตอบแทนคุณ" },
+    { word: "REPRESS", phonetic: "/rɪˈpres/", pos: "verb", translation: "สะกดกั้น / ปราบปราม / ข่มอารมณ์" },
+    { word: "RESIDUE", phonetic: "/ˈrezɪduː/", pos: "noun", translation: "กาก / สารตกค้าง / สิ่งที่เหลืออยู่" },
+    { word: "RETRIEVE", phonetic: "/rɪˈtriːv/", pos: "verb", translation: "กู้คืน / ดึงข้อมูลกลับมา" },
+    { word: "RHETORIC", phonetic: "/ˈretərɪk/", pos: "noun", translation: "วาทศิลป์ / ศิลปะการใช้คำพูดพรรณนา" },
+    { word: "RIB", phonetic: "/rɪb/", pos: "noun", translation: "ซี่โครง" },
+    { word: "RIDGE", phonetic: "/rɪdʒ/", pos: "noun", translation: "สันเขา / สันปันน้ำ / แนวสัน" },
+    { word: "RIFLE", phonetic: "/ˈraɪfl/", pos: "noun/verb", translation: "ปืนไรเฟิล / ปืนยาว / ค้นหาของขโมย" },
+    { word: "RIGID", phonetic: "/ˈrɪdʒɪd/", pos: "adjective", translation: "แข็งทื่อ / แข็งกระด้าง / เข้มงวดไม่ยืดหยุ่น" },
+    { word: "RIGOUR", phonetic: "/ˈrɪɡər/", pos: "noun", translation: "ความเข้มงวด / ความรัดกุมแม่นยำ" },
+    { word: "RIOT", phonetic: "/ˈraɪət/", pos: "noun/verb", translation: "การจลาจล / ก่อความวุ่นวาย" },
+    { word: "ROD", phonetic: "/rɑːd/", pos: "noun", translation: "ท่อนไม้ / แท่งเหล็ก / เบ็ดตกปลา" },
+    { word: "RUG", phonetic: "/rʌɡ/", pos: "noun", translation: "พรมปูพื้น / ผ้าห่มขนสัตว์" },
+    { word: "SACK", phonetic: "/sæk/", pos: "noun/verb", translation: "กระสอบ / ไล่ออกจากงาน / ปล้นสะดม" },
+    { word: "SACRED", phonetic: "/ˈseɪkrɪd/", pos: "adjective", translation: "ศักดิ์สิทธิ์ / เป็นที่เคารพบูชา" },
+    { word: "SANE", phonetic: "/seɪn/", pos: "adjective", translation: "มีสติสัมปชัญญะดี / สมประกอบ" },
+    { word: "SAVAGE", phonetic: "/ˈsævɪdʒ/", pos: "adjective/noun/verb", translation: "ป่าเถื่อน / โหดร้ายทารุณ" },
+    { word: "SCARCE", phonetic: "/skers/", pos: "adjective", translation: "ขาดแคลน / หายาก" },
+    { word: "SCENT", phonetic: "/sent/", pos: "noun/verb", translation: "กลิ่นหอม / ดมกลิ่น" },
+    { word: "SCEPTIC", phonetic: "/ˈskeptɪk/", pos: "noun", translation: "ผู้สงสัย / คนที่ชอบตั้งข้อระแวง" },
+    { word: "SCOUT", phonetic: "/skaʊt/", pos: "noun/verb", translation: "ลูกเสือ / แมวมอง / ทหารพรานกองสอดแนม" },
+    { word: "SCRAP", phonetic: "/skræp/", pos: "noun/verb", translation: "เศษสิ่งของ / เศษเหล็ก / ทิ้ง / เศษอาหาร" },
+    { word: "SCRAPE", phonetic: "/skreɪp/", pos: "verb/noun", translation: "ขูด / ครูด / ถลอก" },
+    { word: "SCRIPT", phonetic: "/skrɪpt/", pos: "noun/verb", translation: "บทละคร / ตัวเขียน / สคริปต์คอมพิวเตอร์" },
+    { word: "SCRUTINY", phonetic: "/ˈskruːtəni/", pos: "noun", translation: "การตรวจสอบอย่างละเอียดถี่ถ้วน" },
+    { word: "SECULAR", phonetic: "/ˈsekjələr/", pos: "adjective", translation: "ทางโลก / ไม่เกี่ยวกับศาสนา" },
+    { word: "SELDOM", phonetic: "/ˈseldəm/", pos: "adverb", translation: "นานๆ ครั้ง / แทบจะไม่เคย" },
+    { word: "SEMINAR", phonetic: "/ˈsemɪnɑːr/", pos: "noun", translation: "การสัมมนา / การอบรมเชิงปฏิบัติการ" },
+    { word: "SENATOR", phonetic: "/ˈsenətər/", pos: "noun", translation: "วุฒิสมาชิก / สมาชิกสภาสูง" },
+    { word: "SENSATION", phonetic: "/senˈseɪʃn/", pos: "noun", translation: "ความรู้สึกทางกาย / เรื่องราวที่สร้างความฮือฮา" },
+    { word: "SENTENCING", phonetic: "/ˈsentənsɪŋ/", pos: "noun", translation: "การพิพากษาโทษ / การตัดสินลงทัณฑ์" },
+    { word: "SENTIMENT", phonetic: "/ˈsentɪmənt/", pos: "noun", translation: "ความรู้สึก / ทัศนคติทางอารมณ์" },
+    { word: "SERGEANT", phonetic: "/ˈsɑːrdʒənt/", pos: "noun", translation: "นายสิบ / จ่าสิบเอก" },
+    { word: "SHAFT", phonetic: "/ʃæft/", pos: "noun", translation: "ด้ามจับ / เพลากลไก / ปล่องตึก / ปล่องลิฟต์" },
+    { word: "SHATTER", phonetic: "/ˈʃætər/", pos: "verb", translation: "แตกเป็นเสี่ยงๆ / ทำลายความหวัง" },
+    { word: "SHEER", phonetic: "/ʃɪr/", pos: "adjective/adverb", translation: "ที่สุด / แท้ๆ / สูงชันมาก / บางเฉียบ" },
+    { word: "SHERIFF", phonetic: "/ˈʃerɪf/", pos: "noun", translation: "นายอำเภอ / หัวหน้าตำรวจท้องถิ่น" },
+    { word: "SHRINK", phonetic: "/ʃrɪŋk/", pos: "verb/noun", translation: "หดตัว / เล็กลง / กลัวหดหัว" },
+    { word: "SINCERE", phonetic: "/sɪnˈsɪr/", pos: "adjective", translation: "จริงใจ / บริสุทธิ์ใจ" },
+    { word: "SIP", phonetic: "/sɪp/", pos: "verb/noun", translation: "จิบ / ดื่มทีละนิด" },
+    { word: "SKETCH", phonetic: "/sketʃ/", pos: "noun/verb", translation: "ภาพร่าง / วาดภาพโครงร่างสเก็ตช์" },
+    { word: "SLAM", phonetic: "/slæm/", pos: "verb/noun", translation: "ปิดเสียงดังปัง / กระแทกแรง" },
+    { word: "SLAP", phonetic: "/slæp/", pos: "verb/noun", translation: "ตบ (ด้วยฝ่ามือ) / เสียงตบ" },
+    { word: "SLEEVE", phonetic: "/sliːv/", pos: "noun", translation: "แขนเสื้อ / ซองใส่ของ" },
+    { word: "SLUMP", phonetic: "/slʌmp/", pos: "noun/verb", translation: "การตกต่ำทางเศรษฐกิจ / ทรุดตัวลง" },
+    { word: "SNATCH", phonetic: "/snætʃ/", pos: "verb/noun", translation: "ฉกฉวย / กระชาก / คว้าไป" },
+    { word: "SOCIOLOGY", phonetic: "/ˌsoʊsiˈɑːlədʒi/", pos: "noun", translation: "สังคมวิทยา" },
+    { word: "SPAN", phonetic: "/spæn/", pos: "noun/verb", translation: "ช่วงเวลา / ระยะกว้าง / กินเวลาต่อเนื่อง" },
+    { word: "SPATIAL", phonetic: "/ˈspeɪʃl/", pos: "adjective", translation: "เกี่ยวกับพื้นที่ / ระยะห่างช่องว่าง" },
+    { word: "SPECTACLE", phonetic: "/ˈspektəkl/", pos: "noun", translation: "ภาพที่น่าตื่นตาตื่นใจ / การแสดงที่อลังการ" },
+    { word: "SPECTACULAR", phonetic: "/spekˈtækjələr/", pos: "adjective", translation: "น่าตื่นตาตื่นใจ / งดงามตระการตา" },
+    { word: "SPIKE", phonetic: "/spaɪk/", pos: "noun/verb", translation: "ตะปูยักษ์ / ตะปูรองเท้า / พุ่งขึ้นสูงเฉียบพลัน" },
+    { word: "SPINE", phonetic: "/spaɪn/", pos: "noun", translation: "กระดูกสันหลัง / สันหนังสือ / หนามสัตว์" },
+    { word: "SPIT", phonetic: "/spɪt/", pos: "verb/noun", translation: "ถ่มน้ำลาย / น้ำลาย" },
+    { word: "SPONTANEOUS", phonetic: "/spɑːnˈteɪniəs/", pos: "adjective", translation: "เกิดขึ้นเองตามธรรมชาติ / โดยไม่ได้นัดหมาย" },
+    { word: "SPUR", phonetic: "/spɜːr/", pos: "noun/verb", translation: "สิ่งกระตุ้น / เดือยรองเท้า / เร่งเร้า" },
+    { word: "STAB", phonetic: "/stæb/", pos: "verb/noun", translation: "แทงด้วยมีด / ลอบทำร้าย" },
+    { word: "STACK", phonetic: "/stæk/", pos: "noun/verb", translation: "กองซ้อนกัน / กองสิ่งของเป็นตั้ง" },
+    { word: "STAGGER", phonetic: "/ˈstæɡər/", pos: "verb/noun", translation: "เดินโซเซ / ทำให้ตกใจ / จัดเวลาสลับเหลื่อมกัน" },
+    { word: "STALL", phonetic: "/stɔːl/", pos: "noun/verb", translation: "แผงลอยขายของ / คอกสัตว์ / เครื่องยนต์ดับ / ถ่วงเวลา" },
+    { word: "STANCE", phonetic: "/stæns/", pos: "noun", translation: "ท่าทางการยืน / จุดยืนทัศนคติ" },
+    { word: "STARTLE", phonetic: "/ˈstɑːrtl/", pos: "verb", translation: "ทำให้สะดุ้งตื่นตกใจ" },
+    { word: "STATUE", phonetic: "/ˈstætʃuː/", pos: "noun", translation: "รูปปั้น / รูปสลัก" },
+    { word: "STEEP", phonetic: "/stiːp/", pos: "adjective", translation: "ชัน / สูงชัน / แพงเกินเหตุ" },
+    { word: "STEER", phonetic: "/stɪr/", pos: "verb/noun", translation: "คุมพวงมาลัย / ขับขี่นำทาง" },
+    { word: "STEREOTYPE", phonetic: "/ˈsteriətaɪp/", pos: "noun/verb", translation: "ทัศนคติเหมารวม / ภาพจำตายตัว" },
+    { word: "STERN", phonetic: "/stɜːrn/", pos: "adjective/noun", translation: "เคร่งขรึม / ดุดัน / ท้ายเรือ" },
+    { word: "STIMULUS", phonetic: "/ˈstɪmjələs/", pos: "noun", translation: "สิ่งเร้า / ตัวกระตุ้น (พหูพจน์คือ stimuli)" },
+    { word: "STITCH", phonetic: "/stɪtʃ/", pos: "noun/verb", translation: "ฝีเข็ม / เย็บแผล / เย็บผ้า" },
+    { word: "STRAIGHTFORWARD", phonetic: "/ˌstreɪtˈfɔːrwərd/", pos: "adjective", translation: "ตรงไปตรงมา / ง่ายๆ ไม่ซับซ้อน" },
+    { word: "STRAND", phonetic: "/strænd/", pos: "noun/verb", translation: "เกลียวเชือก / เส้นผม / เกยตื้น / ปล่อยทิ้งเกาะ" },
+    { word: "STRAP", phonetic: "/stræp/", pos: "noun/verb", translation: "สายรัด / สายกระเป๋า / รัดด้วยสายรัด" },
+    { word: "STRAW", phonetic: "/strɔː/", pos: "noun", translation: "ฟางข้าว / หลอดดูดน้ำ" },
+    { word: "STREAK", phonetic: "/striːk/", pos: "noun/verb", translation: "แนวเส้น / ช่วงเวลาที่สำเร็จหรือล้มเหลวติดต่อกัน" },
+    { word: "STRIDE", phonetic: "/straɪd/", pos: "verb/noun", translation: "ก้าวยาวๆ / ความก้าวหน้า" },
+    { word: "STRIPE", phonetic: "/straɪp/", pos: "noun", translation: "ริ้ว / แถบลายเส้น / ลายเสือ" },
+    { word: "STROLL", phonetic: "/stroʊl/", pos: "verb/noun", translation: "เดินเล่น / เดินทอดน่อง" },
+    { word: "STUFFED", phonetic: "/stʌft/", pos: "adjective", translation: "ยัดไส้ / แน่นเอี้ยด / อิ่มแปร้" },
+    { word: "STUMBLE", phonetic: "/ˈstʌmbl/", pos: "verb/noun", translation: "สะดุดขาตัวเอง / พบเจอโดยบังเอิญ" },
+    { word: "SUBJECTED", phonetic: "/səbˈdʒektɪd/", pos: "adjective/verb", translation: "ได้รับ (ผลกระทบ) / ตกอยู่ใต้บังคับ" },
+    { word: "SUBJECTIVE", phonetic: "/səbˈdʒektɪv/", pos: "adjective", translation: "เป็นไปตามความคิดส่วนตัว / อัตนัย" },
+    { word: "SUBORDINATE", phonetic: "/səˈbɔːrdɪnət/", pos: "noun/adjective/verb", translation: "ผู้ใต้บังคับบัญชา / ลูกน้อง / รองลงมา" },
+    { word: "SUBSCRIBE", phonetic: "/səbˈskraɪ/", pos: "verb", translation: "สมัครสมาชิก / ติดตามรับข้อมูล" },
+    { word: "SUBSIDIARY", phonetic: "/səbˈsɪdieri/", pos: "noun/adjective", translation: "บริษัทในเครือ / ย่อย / เสริมเสริม" },
+    { word: "SUED", phonetic: "/suːd/", pos: "verb", translation: "ถูกฟ้องร้องคดีความ (ช่อง 2/3 ของ sue)" },
+    { word: "SUITE", phonetic: "/swiːt/", pos: "noun", translation: "ห้องชุดในโรงแรม / ชุดเฟอร์นิเจอร์ / ชุดซอฟต์แวร์" },
+    { word: "SUMMON", phonetic: "/ˈsʌmən/", pos: "verb", translation: "ออกหมายเรียก / เรียกตัว / ออกคำสั่งเรียกประชุม" },
+    { word: "SUPERB", phonetic: "/suːˈpɜːrb/", pos: "adjective", translation: "ยอดเยี่ยมยอดประเสริฐ / หรูหราอลังการ" },
+    { word: "SUPPER", phonetic: "/ˈsʌpər/", pos: "noun", translation: "อาหารมื้อค่ำ (เบาๆ ก่อนนอน)" },
+    { word: "SUPPRESS", phonetic: "/səˈpres/", pos: "verb", translation: "ปราบปราม / อดกลั้น / ระงับข่มไว้" },
+    { word: "SURGE", phonetic: "/sɜːrdʒ/", pos: "noun/verb", translation: "การเพิ่มขึ้นอย่างรวดเร็ว / พลุ่งพล่าน / คลื่นยักษ์" },
+    { word: "SURGEON", phonetic: "/ˈsɜːrdʒən/", pos: "noun", translation: "ศัลยแพทย์ / หมอผ่าตัด" },
+    { word: "SURPLUS", phonetic: "/ˈsɜːrplʌs/", pos: "noun/adjective", translation: "ส่วนเกิน / ยอดรวมผลกำไรส่วนต่าง" },
+    { word: "SURRENDER", phonetic: "/səˈrendər/", pos: "verb/noun", translation: "ยอมจำนน / ยอมแพ้ / ส่งมอบตัว" },
+    { word: "SWIFT", phonetic: "/swɪft/", pos: "adjective/noun", translation: "รวดเร็วฉับไว / นกแอ่น" },
+    { word: "TABLESPOON", phonetic: "/ˈteɪblspuːn/", pos: "noun", translation: "ช้อนโต๊ะ (หน่วยตวงอาหาร)" },
+    { word: "TENANT", phonetic: "/ˈtenənt/", pos: "noun/verb", translation: "ผู้เช่าตึก / ผู้เช่าบ้าน" },
+    { word: "TERRACE", phonetic: "/ˈterəs/", pos: "noun", translation: "ระเบียงกลางแจ้ง / ชานบ้าน / ขั้นบันไดดิน" },
+    { word: "TERRIFY", phonetic: "/ˈterɪfaɪ/", pos: "verb", translation: "ทำให้หวาดกลัวอย่างรุนแรง" },
+    { word: "TESTAMENT", phonetic: "/ˈtestəmənt/", pos: "noun", translation: "พินัยกรรม / ข้อพิสูจน์แสดงหลักฐาน" },
+    { word: "TESTIMONY", phonetic: "/ˈtestɪmoʊni/", pos: "noun", translation: "คำให้การในศาล / คำพยานรับรอง" },
+    { word: "TEXTILE", phonetic: "/ˈtekstaɪl/", pos: "noun/adjective", translation: "สิ่งทอ / ผ้าทอ" },
+    { word: "TEXTURE", phonetic: "/ˈtekstʃər/", pos: "noun", translation: "เนื้อสัมผัส / ผิวสัมผัสของวัตถุ" },
+    { word: "THEFT", phonetic: "/θeft/", pos: "noun", translation: "การลักทรัพย์ / คดีโจรกรรม" },
+    { word: "THIGH", phonetic: "/θaɪ/", pos: "noun", translation: "ต้นขา" },
+    { word: "THOU", phonetic: "/ðaʊ/", pos: "pronoun", translation: "ท่าน / มึง (คำโบราณใช้แทนคำว่า you)" },
+    { word: "THREAD", phonetic: "/θred/", pos: "noun/verb", translation: "เส้นด้าย / ร้อยด้าย / กระทู้สนทนาออนไลน์ต่อนื่อง" },
+    { word: "THRESHOLD", phonetic: "/ˈθreʃhoʊld/", pos: "noun", translation: "ธรณีประตู / เกณฑ์เริ่มแรก / ขีดเริ่มสัญญาน" },
+    { word: "THRIVE", phonetic: "/θraɪv/", pos: "verb", translation: "เจริญรุ่งเรือง / เติบโตงอกงามอย่างดี" },
+    { word: "THRUST", phonetic: "/θrʌst/", pos: "verb/noun", translation: "ผลัก / แทงกระแทกแรง / แรงขับดัน" },
+    { word: "THUMB", phonetic: "/θʌm/", pos: "noun/verb", translation: "นิ้วหัวแม่มือ / นิ้วโป้ง" },
+    { word: "TICK", phonetic: "/tɪk/", pos: "noun/verb", translation: "เครื่องหมายติ๊กถูก / ตัวเห็บ / เสียงนาฬิกาเดิน" },
+    { word: "TIGER", phonetic: "/ˈtaɪɡər/", pos: "noun", translation: "เสือ" },
+    { word: "TILE", phonetic: "/taɪl/", pos: "noun/verb", translation: "กระเบื้องปูพื้นหรือหลังคา" },
+    { word: "TILT", phonetic: "/tɪlt/", pos: "verb/noun", translation: "เอียง / ตะแคง" },
+    { word: "TIMBER", phonetic: "/ˈtɪmbər/", pos: "noun", translation: "ไม้ซุง / ไม้ก่อสร้าง" },
+    { word: "TOLERATE", phonetic: "/ˈtɑːləreɪt/", pos: "verb", translation: "อดทนยอมรับ / ยอมความ" },
+    { word: "TORTURE", phonetic: "/ˈtɔːrtʃər/", pos: "noun/verb", translation: "การทรมาน / ทารุณกรรม" },
+    { word: "TRAGIC", phonetic: "/ˈtrædʒɪk/", pos: "adjective", translation: "น่าสลดใจ / เป็นโศกนาฏกรรม" },
+    { word: "TRAIT", phonetic: "/treɪt/", pos: "noun", translation: "คุณลักษณะเฉพาะตัว / อุปนิสัย" },
+    { word: "TRANSCRIPT", phonetic: "/ˈtrænskrɪpt/", pos: "noun", translation: "ใบรับรองผลการศึกษา / บทคัดลอกถอดความเสียง" },
+    { word: "TRANSPLANT", phonetic: "/trænsˈplænt/", pos: "verb/noun", translation: "ปลูกถ่าย (อวัยวะ) / ย้ายต้นไม้ไปปลูก" },
+    { word: "TRAUMA", phonetic: "/ˈtraʊmə/", pos: "noun", translation: "บาดแผลทางใจ / ความบอบช้ำรุนแรง" },
+    { word: "TREMBLE", phonetic: "/ˈtrembl/", pos: "verb/noun", translation: "สั่นเทา / ตัวสั่นด้วยความกลัว" },
+    { word: "TRIANGLE", phonetic: "/ˈtraɪæŋɡl/", pos: "noun", translation: "รูปสามเหลี่ยม" },
+    { word: "TRIBUNAL", phonetic: "/traɪˈbjuːnl/", pos: "noun", translation: "ศาลพิเศษ / คณะตุลาการตัดสินคดีเฉพาะกิจ" },
+    { word: "TRIBUTE", phonetic: "/ˈtrɪbjuːt/", pos: "noun", translation: "เครื่องบรรณาการ / คำสรรเสริญไว้อาลัย" },
+    { word: "TRIM", phonetic: "/trɪm/", pos: "verb/noun/adjective", translation: "เล็ม / ตัดแต่ง / เพรียวบางเรียบร้อย" },
+    { word: "TROPHY", phonetic: "/ˈtroʊfi/", pos: "noun", translation: "ถ้วยรางวัล / ถ้วยเกียรติยศ" },
+    { word: "TROPICS", phonetic: "/ˈtrɑːpɪks/", pos: "noun", translation: "เขตร้อน / ประเทศในเขตร้อนโลก" },
+    { word: "TROUSERS", phonetic: "/ˈtraʊzərz/", pos: "noun", translation: "กางเกงขายาว" },
+    { word: "TRUSTEE", phonetic: "/trʌˈstiː/", pos: "noun", translation: "ผู้จัดการมรดก / กรรมการบริหารกองทุน" },
+    { word: "TUCK", phonetic: "/tʌk/", pos: "verb/noun", translation: "สอดเก็บ / พับเหน็บชายผ้า" },
+    { word: "TUG", phonetic: "/tʌɡ/", pos: "verb/noun", translation: "ดึงกระชากอย่างแรง / เรือลากจูง" },
+    { word: "TUMBLE", phonetic: "/ˈtʌmbl/", pos: "verb/noun", translation: "ล้มคะมำ / กลิ้งหล่นลงมา" },
+    { word: "TUMOUR", phonetic: "/ˈtuːmər/", pos: "noun", translation: "เนื้องอก / ก้อนเนื้ออุดตัน" },
+    { word: "TURNOVER", phonetic: "/ˈtɜːrnoʊvər/", pos: "noun", translation: "ยอดขายหมุนเวียน / อัตราการเข้าออกของพนักงาน" },
+    { word: "TUTOR", phonetic: "/ˈtuːtər/", pos: "noun/verb", translation: "อาจารย์พิเศษ / ครูสอนพิเศษ" },
+    { word: "UNDERMINE", phonetic: "/ˌʌndərˈmaɪn/", pos: "verb", translation: "บ่อนทำลาย / ลดทอนความน่าเชื่อถือลงทีละน้อย" },
+    { word: "UNIFY", phonetic: "/ˈjuːnɪfaɪ/", pos: "verb", translation: "รวมกันเป็นหนึ่งเดียว / สมานฉันท์" },
+    { word: "UPWARDS", phonetic: "/ˈʌpwərdz/", pos: "adverb", translation: "ขึ้นไปด้านบน / สูงขึ้นไป" },
+    { word: "UTILISE", phonetic: "/ˈjuːtəlaɪz/", pos: "verb", translation: "ใช้ประโยชน์ / นำไปใช้จริงให้คุ้มค่า" },
+    { word: "UTTER", phonetic: "/ˈʌtər/", pos: "adjective/verb", translation: "ที่สุด / อย่างสิ้นเชิง / เปล่งเสียงพูดออกมา" },
+    { word: "VALIDATE", phonetic: "/ˈvælɪdeɪt/", pos: "verb", translation: "ตรวจสอบความถูกต้อง / ให้สัตยาบันรับรอง" },
+    { word: "VANISH", phonetic: "/ˈvænɪʃ/", pos: "verb", translation: "อันตรธานหายไป / หายลับตา" },
+    { word: "VEIL", phonetic: "/veɪl/", pos: "noun/verb", translation: "ผ้าคลุมหน้า / สิ่งปิดบังซ่อนเร้น" },
+    { word: "VEIN", phonetic: "/veɪn/", pos: "noun", translation: "หลอดเลือดดำ / ลายเส้นใบไม้หรือหินอ่อน" },
+    { word: "VENDOR", phonetic: "/ˈvendər/", pos: "noun", translation: "พ่อค้าแม่ค้าแผงลอย / ผู้ขายสินค้า" },
+    { word: "VENUE", phonetic: "/ˈvenjuː/", pos: "noun", translation: "สถานที่จัดงาน / สถานที่เกิดเหตุนัดหมาย" },
+    { word: "VERBAL", phonetic: "/ˈvɜːrbl/", pos: "adjective", translation: "ด้วยวาจา / คำพูดปากเปล่า" },
+    { word: "VERDICT", phonetic: "/ˈvɜːrdɪkt/", pos: "noun", translation: "คำพิพากษาของคณะลูกขุน / คำตัดสินชี้ขาด" },
+    { word: "VERIFY", phonetic: "/ˈverɪfaɪ/", pos: "verb", translation: "พิสูจน์ความจริง / ตรวจสอบยืนยันสิทธิ์" },
+    { word: "VERSE", phonetic: "/vɜːrs/", pos: "noun/verb", translation: "บทกวี / กลอน / โคลง / บทเพลงคอร์สย่อย" },
+    { word: "VERTICAL", phonetic: "/ˈvɜːrtɪkl/", pos: "adjective/noun", translation: "แนวตั้ง / เส้นดิ่ง" },
+    { word: "VETERINARIAN", phonetic: "/ˌvetərɪˈnerɪən/", pos: "noun", translation: "สัตวแพทย์ / หมอรักษาสัตว์" },
+    { word: "VIABLE", phonetic: "/ˈvaɪəbl/", pos: "adjective", translation: "ที่สามารถทำได้จริง / มีชีวิตเติบโตได้" },
+    { word: "VIBRATE", phonetic: "/ˈvaɪbreɪt/", pos: "verb", translation: "สั่นสะเทือน / สั่นระฆัง" },
+    { word: "VIGOROUS", phonetic: "/ˈvɪɡərəs/", pos: "adjective", translation: "กระฉับกระเฉง / เต็มไปด้วยพลัง / รุนแรงเฉียบขาด" },
+    { word: "VILLA", phonetic: "/ˈvɪlə/", pos: "noun", translation: "บ้านพักตากอากาศหลังใหญ่" },
+    { word: "VIVID", phonetic: "/ˈvɪvɪd/", pos: "adjective", translation: "แจ่มชัด / สีสันสดใสเข้มข้น / เห็นภาพเด่นชัด" },
+    { word: "VOCAL", phonetic: "/ˈvoʊkl/", pos: "adjective/noun", translation: "เกี่ยวกับการใช้เสียง / เสียงร้องเพลง / แสดงความเห็นชัดเจน" },
+    { word: "WAIST", phonetic: "/weɪst/", pos: "noun", translation: "เอว / ส่วนกลางลำตัว" },
+    { word: "WAN", phonetic: "/wæn/", pos: "adjective", translation: "ซีดเซียว / อ่อนแรงอ่อนล้า" },
+    { word: "WARD", phonetic: "/wɔːrd/", pos: "noun/verb", translation: "ตึกผู้ป่วยในโรงพยาบาล / เขตเลือกตั้ง / ป้องกันตัว" },
+    { word: "WARRANT", phonetic: "/ˈwɔːrənt/", pos: "noun/verb", translation: "หมายค้นหรือหมายจับ / หลักประกันรับรองสิทธิ์" },
+    { word: "WEARY", phonetic: "/ˈwɪri/", pos: "adjective/verb", translation: "เหนื่อยล้าเต็มทน / เบื่อหน่ายอย่างยิ่ง" },
+    { word: "WEBS", phonetic: "/webz/", pos: "noun", translation: "ใยแมงมุม / เครือข่ายระบบข้อมูล (พหูพจน์)" },
+    { word: "WEEP", phonetic: "/wiːp/", pos: "verb/noun", translation: "ร้องไห้คร่ำครวญ / หลั่งน้ำตา" },
+    { word: "WELLS", phonetic: "/welz/", pos: "noun", translation: "บ่อน้ำบาดาล / บ่อน้ำมัน (พหูพจน์)" },
+    { word: "WIT", phonetic: "/wɪt/", pos: "noun", translation: "สติปัญญา / ไหวพริบปฏิภาณ" },
+    { word: "WORSHIP", phonetic: "/ˈwɜːrʃɪp/", pos: "verb/noun", translation: "สักการะบูชา / กราบไหว้สิ่งศักดิ์สิทธิ์" },
+    { word: "WRIST", phonetic: "/rɪst/", pos: "noun", translation: "ข้อมือ" }
+];
+
+        // ⚙️ ตั้งค่าจำนวนข้อสอบที่จะสุ่มขึ้นมาเล่นต่อหนึ่งรอบ (ปรับเปลี่ยนได้ตามต้องการ)
+        const QUESTIONS_PER_ROUND = 50; 
+
+        let currentPool = [];
+        let currentIndex = 0;
+        let score = 0;
+        let streak = 0;
+        let maxStreak = 0;
+        let hasAnswered = false;
+
+        // ฟังก์ชันสุ่มลำดับ Array (Fisher-Yates Shuffle)
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        // ฟังก์ชันเริ่มต้นทำแบบทดสอบใหม่
+        function startQuiz() {
+            // โคลนคลังคำศัพท์และสุ่มเลือกคำตามจำนวนข้อสอบที่กำหนดไว้
+            let shuffledVocab = shuffle([...vocabData]);
+            currentPool = shuffledVocab.slice(0, Math.min(QUESTIONS_PER_ROUND, vocabData.length));
+            
+            currentIndex = 0;
+            score = 0;
+            streak = 0;
+            maxStreak = 0;
+            
+            document.getElementById('quiz-view').style.display = 'block';
+            document.getElementById('summary-view').style.display = 'none';
+            document.getElementById('total-count').innerText = currentPool.length;
+            
+            loadQuestion();
+        }
+
+        // แสดงคำถามและสร้างตัวเลือกคำตอบ 2 ตัวเลือก
+        function loadQuestion() {
+            hasAnswered = false;
+            document.getElementById('btn-next').style.display = 'none';
+            
+            const currentData = currentPool[currentIndex];
+            
+            // แสดงข้อมูลคำศัพท์บนหน้าจอ
+            document.getElementById('current-count').innerText = currentIndex + 1;
+            document.getElementById('score-display').innerText = score;
+            document.getElementById('streak-display').innerText = streak;
+            document.getElementById('word-target').innerText = currentData.word;
+            document.getElementById('word-pos').innerText = currentData.pos;
+            document.getElementById('word-phonetic').innerText = currentData.phonetic;
+
+            const optionsBox = document.getElementById('options-box');
+            optionsBox.innerHTML = '';
+
+            // ดึงคำแปลอื่นๆ ทั้งหมดในคลังมาเตรียมเป็นตัวเลือกหลอก (คัดคำตอบที่ถูกออกก่อน)
+            let wrongCandidates = vocabData
+                .map(v => v.translation)
+                .filter(t => t !== currentData.translation);
+            
+            // สุ่มเลือกตัวเลือกหลอกมา 2 ตัวเลือก
+            wrongCandidates = shuffle(wrongCandidates).slice(0, 2);
+            
+            // รวมคำแปลที่ถูกกับคำแปลหลอกเข้าด้วยกัน แล้วสุ่มตำแหน่งปุ่ม
+            let finalOptions = [currentData.translation, ...wrongCandidates];
+            finalOptions = shuffle(finalOptions);
+
+            // วนลูปสร้างปุ่มตัวเลือกขึ้นมาบนหน้าเว็บ
+            finalOptions.forEach(optionText => {
+                const btn = document.createElement('button');
+                btn.classList.add('option-btn');
+                btn.innerText = optionText;
+                btn.onclick = () => checkAnswer(btn, optionText, currentData.translation);
+                optionsBox.appendChild(btn);
+            });
+        }
+
+        // ฟังก์ชันการตรวจสอบคำตอบเมื่อผู้เรียนคลิกเลือกปุ่ม
+        function checkAnswer(selectedBtn, selectedText, correctText) {
+            if (hasAnswered) return; // ล็อกเพื่อป้องกันการคลิกคำตอบซ้ำ
+            hasAnswered = true;
+
+            const allButtons = document.querySelectorAll('.option-btn');
+            
+            if (selectedText === correctText) {
+                // กรณีตอบถูกต้อง
+                selectedBtn.classList.add('correct');
+                score++;
+                streak++;
+                if (streak > maxStreak) maxStreak = streak;
+                
+                // ถ้าระบบตอบถูกจะเปลี่ยนเป็นข้อถัดไปให้อัตโนมัติในเวลา 1 วินาที
+                setTimeout(() => {
+                    nextQuestion();
+                }, 1000);
+            } else {
+                // กรณีตอบผิด
+                selectedBtn.classList.add('wrong');
+                streak = 0; // รีเซ็ตแต้ม Streak กองไฟกลับเป็นศูนย์
+                
+                // ไฮไลต์ปุ่มเฉลยตัวเลือกที่ถูกต้องเป็นสีเขียวทันทีเพื่อให้รู้ข้อที่ถูก
+                allButtons.forEach(btn => {
+                    if (btn.innerText === correctText) {
+                        btn.classList.add('correct');
+                    }
+                });
+                
+                // แสดงปุ่ม "คำต่อไป" เพื่อให้ผู้เรียนคลิกเปลี่ยนข้อด้วยตนเองเมื่ออ่านเฉลยเสร็จ
+                document.getElementById('btn-next').style.display = 'block';
+            }
+
+            // สั่งปิดการใช้งานปุ่มทั้งหมดชั่วคราวเพื่อให้อ่านผลลัพธ์
+            allButtons.forEach(btn => btn.disabled = true);
+            document.getElementById('score-display').innerText = score;
+            document.getElementById('streak-display').innerText = streak;
+        }
+
+        // เปลี่ยนไปยังข้อถัดไป หรือเปลี่ยนไปหน้าสรุปผลถ้าทำครบกำหนด
+        function nextQuestion() {
+            currentIndex++;
+            if (currentIndex < currentPool.length) {
+                loadQuestion();
+            } else {
+                showSummary();
+            }
+        }
+
+        // แสดงหน้าจอสรุปคะแนนหลังทำครบทุกข้อ
+        function showSummary() {
+            document.getElementById('quiz-view').style.display = 'none';
+            document.getElementById('summary-view').style.display = 'block';
+            
+            const percentage = Math.round((score / currentPool.length) * 100);
+            document.getElementById('percent-display').innerText = percentage + "%";
+            document.getElementById('final-score').innerText = score;
+            document.getElementById('final-total').innerText = currentPool.length;
+            document.getElementById('streak-max-display').innerText = `🔥 ทำ Streak สูงสุดได้: ${maxStreak} ข้อติดต่อกัน`;
+        }
+
+        // เริ่มต้นการทำงานระบบทันทีที่เปิดหน้าเว็บ
+        startQuiz();
+    </script>
+
+</body>
+</html>
